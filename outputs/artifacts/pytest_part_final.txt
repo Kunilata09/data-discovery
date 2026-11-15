@@ -1,0 +1,13 @@
+# Part 3 final validation (after Part 1 documentation fix and Part 2 contains_pii fix + targeted Nager profile)
+# command: .venv/bin/python -m pytest tests/ -q
+........................................................................ [ 76%]
+......................                                                   [100%]
+94 passed in 0.20s
+
+# command: .venv/bin/python -m pytest tests/test_learner_gaps.py -q
+.....................                                                    [100%]
+21 passed in 0.03s
+
+# command: .venv/bin/python -m pytest tests/test_tc022_declared_metadata.py -q
+........                                                                 [100%]
+8 passed in 0.06s

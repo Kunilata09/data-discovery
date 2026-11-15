@@ -1,0 +1,4 @@
+Discovery run UC1 | model=claude-haiku-5-5 | stages profile..memo | out=/tmp/tc018_scratch/outputs/UC1
+[profile]
+  totals: {'llm_calls': 0, 'input_tokens': 0, 'output_tokens': 0, 'cache_read_input_tokens': 0, 'tool_calls': 0, 'tool_errors': 0, 'http_requests': 0, 'http_refused': 0}
+Missing /tmp/tc018_scratch/outputs/UC1/gate_decisions.json. Record accept or reject, with a reason, for each dataset link before profiling. Format and rules: README section 9, template links/_TEMPLATE_gate_decisions.json.

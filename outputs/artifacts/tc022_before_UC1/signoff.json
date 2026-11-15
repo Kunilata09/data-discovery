@@ -1,0 +1,60 @@
+{
+  "reviewer": "KUNILATA MUDULI",
+  "verdict": "proceed_with_conditions",
+  "conditions": [
+    {
+      "text": "Prototype use only. Production use is not supported: N2 (traffic counts without a station mapping) and N3 humidity (no source) are not closed.",
+      "owner": "Valdena Civic Health Office",
+      "due": "2026-12-15"
+    },
+    {
+      "text": "Confirm the UCI research-only note against CC BY 4.0, and whether warning use is permitted, before any prototype output is shared.",
+      "owner": "Legal",
+      "due": "2026-12-15"
+    },
+    {
+      "text": "Treat -200 as null in all numeric UCI columns, including benzene, before any analysis.",
+      "owner": "analytics team",
+      "due": "2026-12-15"
+    },
+    {
+      "text": "Read the Eurostat reuse terms at source before any use of the N6 national context figures.",
+      "owner": "Legal",
+      "due": "2026-12-15"
+    },
+    {
+      "text": "Confirm the status of station VR-03 (catalog says active; wiki says switched off on 2024-06-30) before any production use of station readings.",
+      "owner": "Environment Monitoring Unit",
+      "due": "2026-12-31"
+    }
+  ],
+  "agreements": [
+    {
+      "source_id": "link.uci_360",
+      "reason": "Agree with feasible_with_conditions for N1 prototype only. The missing-value coding (-200) and the single-site limitation are real and are recorded as conditions."
+    },
+    {
+      "source_id": "link.europa_sdg_11_52_099aa6",
+      "reason": "Agree with not_feasible: licence unknown and partial window coverage (2005 only within the prototype window; no production years). The accepted use is prototype context only."
+    },
+    {
+      "source_id": "link.data_open_air_chicago_hour_aggre_d4970b",
+      "reason": "Agree: refused by the guardrail (host not allowlisted) and US geography. The refusal is the recorded finding."
+    },
+    {
+      "source_id": "api.open_meteo_archive",
+      "reason": "Agree the N3 humidity gap: the configured variables are temperature and shortwave radiation only, and no candidate supplies humidity for production."
+    }
+  ],
+  "overrides": [
+    {
+      "source_id": "link.uci_360",
+      "reason": "Dismiss the FRS-STALE flag under calibration rule 5, because the prototype window (2004-03-10 to 2005-04-04) is historical. The verdict stays feasible_with_conditions. The agent kept the flag and recorded no dismissal, so this override is recorded here and not in discovery_results.json."
+    }
+  ],
+  "traced_conclusion": {
+    "source_id": "internal.airq.station_readings",
+    "record_field": "temporal.start",
+    "could_change_if": "Station readings for the prototype window (before 2023-01-01) are supplied by the Environment Monitoring Unit. That would change the statement that internal data cannot serve N1 prototype."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "use_case": "UC2",
+  "problems": [],
+  "trace_stats": {
+    "llm_calls": 30,
+    "input_tokens": 338402,
+    "output_tokens": 59636,
+    "tool_calls": 36,
+    "tool_errors": 1,
+    "http_live": 6,
+    "http_refused": 0,
+    "refused_hosts": [],
+    "unreachable_links": []
+  }
+}

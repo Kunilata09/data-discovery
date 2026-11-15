@@ -1,0 +1,77 @@
+{
+  "source_id": "link.data_open_air_chicago_hour_aggre_d4970b",
+  "kind": "dataset_link",
+  "title": "Open Air Chicago hourly aggregations (data.gov landing page; not reachable from this environment)",
+  "summary": "Human-supplied link to a data.gov catalog record titled \"Open Air Chicago hour aggregations\", described as hourly air-quality sensor data from a US city. The link could not be read because catalog.data.gov is not on the egress allowlist, so its contents, period, licence, owner and file formats are unverified. The stated geography (Chicago, US) falls outside the use case's primary geography (IT).",
+  "schema": {
+    "documented": "none",
+    "fields": [],
+    "notes": "No metadata could be read; the link was refused before any metadata was retrieved."
+  },
+  "temporal": {
+    "start": null,
+    "end": null,
+    "grain": "unknown",
+    "metadata_last_updated": null,
+    "open_ended": null,
+    "refresh_cadence": null
+  },
+  "spatial": {
+    "coverage": [],
+    "code_system": null,
+    "notes": "Per the candidate's why_relevant field, the source is a US city (Chicago). Not verified against the source itself. The use case geography is IT (primary); no IT coverage is indicated."
+  },
+  "ownership": {
+    "owner": null,
+    "publisher": null,
+    "steward": null
+  },
+  "licence": {
+    "name": null,
+    "evidence": "No licence statement could be read: the landing page host was refused (DOMAIN_NOT_ALLOWLISTED) before any metadata was retrieved.",
+    "mixed_sources": null,
+    "commercial_use": "unknown",
+    "agreement_status": null,
+    "attribution_text": null,
+    "url": null
+  },
+  "access": {
+    "method": "file_download",
+    "auth_required": null,
+    "reachable": false,
+    "approx_size_bytes": null,
+    "classification": null,
+    "request_process": "Host catalog.data.gov must be added to config/allowlist.json by the platform owner before this source can be profiled. No other route to the same record should be used."
+  },
+  "declared_metadata": {},
+  "documentation_excerpts": [],
+  "quality_notes": [
+    "inspect_dataset_link on https://catalog.data.gov/dataset/open-air-chicago-hour-aggregations returned DOMAIN_NOT_ALLOWLISTED: host 'catalog.data.gov' is not on config/allowlist.json. Source recorded as unreachable; no data file was sampled.",
+    "Geography mismatch: the use case primary geography is IT (Valdena, northern Italy); the candidate describes a US city (Chicago). Even if reachable, the source would not cover the client's monitoring stations or clinic districts.",
+    "The candidate's target window 'prototype' (2004-03-10 to 2005-04-04) cannot be checked: no period metadata was read.",
+    "The candidate lists no suspected issues and the 'hourly' grain is only the human description, not verified."
+  ],
+  "provenance": [
+    {
+      "claim": "The source is a human-supplied dataset link to catalog.data.gov, described as hourly air-quality sensor data from a US city.",
+      "evidence": "Candidate record link.data_open_air_chicago_hour_aggre_d4970b (found_via: human input; why_relevant field)"
+    },
+    {
+      "claim": "The host catalog.data.gov is refused by the allowlist, so the link cannot be read.",
+      "evidence": "inspect_dataset_link url=https://catalog.data.gov/dataset/open-air-chicago-hour-aggregations returned DOMAIN_NOT_ALLOWLISTED"
+    },
+    {
+      "claim": "The use case primary geography is IT and the windows are 2004-03-10 to 2005-04-04 (prototype) and 2024-01-01 to 2025-12-31 (production).",
+      "evidence": "Use case spec UC1 (geography.primary = [IT]; windows)"
+    }
+  ],
+  "unknowns": [
+    "Actual title, publisher, owner and steward of the dataset.",
+    "Licence and terms of use (not readable).",
+    "Temporal coverage and whether it overlaps the 2004-2005 prototype window.",
+    "Pollutant variables, units, sensor locations, traffic or meteorological fields.",
+    "Whether any file is downloadable and its size and format.",
+    "Whether the description of Chicago as the coverage area is accurate."
+  ],
+  "status": "unknown"
+}

@@ -1,0 +1,76 @@
+# TC-019 re-check (run 2026-11-15T17:11Z); public pages fetched with a plain GET, first 400 KB; no dataset downloaded; allowlist untouched
+## redirect citations (from the log) -> final URL now
+AUZIYQE36GI_hS6KzkROj2emumvKD-... -> https://www.explorationpub.com/Journals/eaa/Article/1009135
+AUZIYQFwAnVYtmTtjeXJHnQwWk2RvK... -> https://www.soldionline.it/notizie/economia-politica/gelato-confezionato-boom-nel-2026-vendite-a-9-in-8-mesi
+AUZIYQHB4A_j6H49LeEhrqU_MfDpcW... -> https://oilprice.com/Energy/Energy-General/Europes-Air-Pollution-Crisis-Persists-Despite-Progress-on-Emissions.html
+AUZIYQHNPE-Gqu82ZS9X14ANCBb7m1... -> https://www.turkiyetoday.com/lifestyle/182000-deaths-in-europe-linked-to-air-pollution-in-2023-study-finds-3210692
+
+## destination page extraction
+
+===== https://www.explorationpub.com/Journals/eaa/Article/1009135
+status: 200 | final: https://www.explorationpub.com/Journals/eaa/Article/1009135
+title: An expert position paper on environment, occupation and climate change effects on allergic respiratory diseases in Italy
+  YEAR: According to the State of Global Air 2025, it caused 7.9 million deaths in 2023, making it the second leading risk factor for mortality.
+  YEAR: The new European Ambient Air Quality Directive (2024/2881/EU), which entered into force in December 2024, introduces stricter air quality standards to be achieved by 2030, while strengthening monitoring systems and public access to air quality information.
+  YEAR: The State of Global Air 2025, published by the Health Effects Institute, showed that in 2023, air pollution caused 7.9 million deaths globally, becoming the second risk factor for mortality, even for children under five.
+  YEAR: The Ambient Air Quality Directive 2024/2881/EU entered into force on 10 December 2024, setting new and stricter limits for air pollutants to be achieved by 2030.
+  YEAR: From 2011 to 2024, a SIP-SIAAIC Task Force has been active, which, among other topics, has addressed the influence of climate change and outdoor and indoor air pollution on respiratory and allergic diseases.
+  YEAR: This activity has led to the development of two posters in recent years, which can be downloaded from the websites of the two societies: CAMBIARE “to change”, presented at the 2022 SIP Congress in Catania and available at the web link https://www.sipirs.it/cms
+  DATA/LIC: Italian Workers’ Compensation Authority (INAIL) data on occupational diseases document an increase in cases of occupational bronchial asthma in the last two years, although their number is still underestimated compared t
+  DATA/LIC: The State of Global Air 2025, published by the Health Effects Institute [ 6 ], provided a comprehensive analysis of data related to air quality and health impact in countries around the world in 2023: air pollution cause
+  DATA/LIC: In March 2025, the Zero Pollution Monitoring and Outlook 2025 report [ 8 ], published by the European Environment Agency (EEA) and the Joint Research Centre (JRC), highlighted that significant progress has been made in E
+  DATA/LIC: As far as Italy is concerned, the EEA’s 2022 Air Quality report [ 9 ] showed that our country ranks 5th between 30 European countries for years lived with disability (YLD) due to COPD attributable to PM 2.5 in adults ove
+
+===== https://www.soldionline.it/notizie/economia-politica/gelato-confezionato-boom-nel-2026-vendite-a-9-in-8-mesi
+status: 200 | final: https://www.soldionline.it/notizie/economia-politica/gelato-confezionato-boom-nel-2026-vendite-a-9-in-8-mesi
+title: Gelato confezionato, boom nel 2026: vendite a +9% in 8 mesi - SoldiOnline.it
+  YEAR:  Gelato confezionato, boom nel 2026: vendite a +9% in 8 mesi - SoldiOnline.it Home Quotazioni Azioni Mib30 Classifiche Top40 Obbligazioni BOT BTP BTP Valore BTP Italia CCT MOT EuroMOT ETC Valute Ultime dai mercati Azioni Italia Mercati Esteri Obbligazioni Macr
+  YEAR: Nei primi otto mesi del 2026 le confezioni vendute hanno registrato una crescita del 9% rispetto allo stesso periodo del 2025, secondo i dati diffusi dall' Istituto del Gelato italiano a Roma, in occasione della presentazione del "Manifesto dell'alimentazione 
+  YEAR: Nel periodo gennaio-agosto 2026, le vendite in confezioni hanno messo a segno un aumento del 9% rispetto al 2025.
+  YEAR: Il report segnala inoltre che questo maggiore appetito per il gelato non si è limitato al consumo domestico: anche il fuori casa , e in particolare il cosiddetto gelato da passeggio (coni, stecchi e coppette acquistati in bar, chioschi e punti vendita), ha qua
+  YEAR: Questo dato è frutto delle rilevazioni di Unione Italiana Food per il periodo gennaio-giugno 2026/2025.
+  YEAR: Produzione 2025: 261.000 tonnellate e 3 miliardi di euro di valore Lo studio ricostruisce anche il quadro della produzione 2025 di gelati confezionati in Italia .
+  DATA/LIC: Il report segnala inoltre che questo maggiore appetito per il gelato non si è limitato al consumo domestico: anche il fuori casa , e in particolare il cosiddetto gelato da passeggio (coni, stecchi e coppette acquistati i
+  DATA/LIC: In base ai dati Eurostat riferiti al 2025 , l’Italia occupa oggi il secondo posto in Europa per volumi prodotti , posizionandosi alle spalle della Germania e davanti alla Francia .
+  DATA/LIC: Eurostat è l’ufficio statistico dell’Unione europea, che raccoglie e armonizza i dati economici e produttivi dei diversi Paesi membri, permettendo confronti omogenei tra i vari settori.
+
+===== https://oilprice.com/Energy/Energy-General/Europes-Air-Pollution-Crisis-Persists-Despite-Progress-on-Emissions.html
+status: 200 | final: https://oilprice.com/Energy/Energy-General/Europes-Air-Pollution-Crisis-Persists-Despite-Progress-on-Emissions.html
+title: Europe’s Air Pollution Crisis Persists Despite Progress on Emissions | OilPrice.com
+  YEAR: Has No Need for Iran Deal 3 days UK Vows Global Climate Leadership as PM Doubles Down on Net Zero 3 days EU Imports of Russian LNG Top 2025 Value Ahead of January Ban 3 days Angola Looks to Diversify from Crude with Windfall Oil Revenues 3 days Turkey Agrees t
+  YEAR: She writes for energy websites and covers several other industries, as well as writing… More Info Share Facebook Twitter Linkedin Reddit Set us as your preferred Google source Trending Discussions Premium Content Europe’s Air Pollution Crisis Persists Despite 
+  YEAR: A 2025 report from the European Environment Agency (EEA) suggests that, between 2005 and 2023, air pollution in the EU contributed to thousands of preventable deaths.
+  YEAR: While premature deaths linked to fine particulate matter fell by 57 percent during this period, according to the report, air pollution still contributed to 182,000 deaths in 2023 .
+  YEAR: Italy reported the highest number of deaths, at 43,083 in 2023.
+  YEAR: In 2025, the EC found that Bulgaria, Portugal, and Sweden had failed to meet the emission reduction commitment for ammonia (NH3), and Lithuania for nitrogen oxides (NOx) and non-methane volatile organic compounds (NMVOC) in the emission data provided up to 202
+  DATA/LIC: Has No Need for Iran Deal 3 days UK Vows Global Climate Leadership as PM Doubles Down on Net Zero 3 days EU Imports of Russian LNG Top 2025 Value Ahead of January Ban 3 days Angola Looks to Diversify from Crude with Wind
+  DATA/LIC: A 2025 report from the European Environment Agency (EEA) suggests that, between 2005 and 2023, air pollution in the EU contributed to thousands of preventable deaths.
+  DATA/LIC: In 2025, the EC found that Bulgaria, Portugal, and Sweden had failed to meet the emission reduction commitment for ammonia (NH3), and Lithuania for nitrogen oxides (NOx) and non-methane volatile organic compounds (NMVOC)
+  DATA/LIC: If approved, your data will then be publically viewable on this article.
+
+===== https://www.turkiyetoday.com/lifestyle/182000-deaths-in-europe-linked-to-air-pollution-in-2023-study-finds-3210692
+status: 200 | final: https://www.turkiyetoday.com/lifestyle/182000-deaths-in-europe-linked-to-air-pollution-in-2023-study-finds-3210692
+title: 182,000 deaths in Europe linked to air pollution in 2023, study finds - Türkiye Today
+  YEAR:  182,000 deaths in Europe linked to air pollution in 2023, study finds - Türkiye Today LATEST COLUMNISTS FEATURED NATION Politics Defense Diplomacy Diaspora Minorities REGION Europe Turkic World Middle East Balkans WORLD Africa Americas Asia & Pacific Conflict
+  YEAR: (Adobe Stock Photo) By Newsroom December 02, 2025 11:19 AM GMT+03:00 Set as preferred source D espite significant improvements in air quality across the European Union (EU) over the past two decades, air pollution continues to pose a major health risk, claimin
+  YEAR: The report indicates that in 2023, 182,000 premature deaths in Europe were attributable to air pollution levels exceeding safe limits, primarily from fine particulate matter (PM2.5).
+  YEAR: While the number of early deaths linked to PM2.5 has declined by 57% between 2005 and 2023, the persistence of unsafe air pollution levels underscores ongoing public health concerns.
+  YEAR: 10, 2024, halves the annual limit for PM2.5, aligning EU standards more closely with WHO recommendations for 2030.
+  YEAR: These new air quality standards will improve millions of Europeans’ quality of life, protect biodiversity and ecosystems, and strengthen our economy." December 02, 2025 11:19 AM GMT+03:00 More From Türkiye Today Endangered yellow-spotted salamander known as 'T
+  DATA/LIC: (Adobe Stock Photo) By Newsroom December 02, 2025 11:19 AM GMT+03:00 Set as preferred source D espite significant improvements in air quality across the European Union (EU) over the past two decades, air pollution contin
+  DATA/LIC: The EEA highlighted that approximately 95% of urban Europeans are exposed to air pollution concentrations far above the World Health Organization (WHO) recommended thresholds.
+  DATA/LIC: More to Read Endangered yellow-spotted salamander known as 'Turkish salamander' seen in Adana, Türkiye Lifestyle 1 min read Unseasonably warm weather, deepening rain deficit persist across Türkiye Lifestyle 1 min read UN
+
+===== https://www.egalite.org/en/pollution-eea-report/
+status: 200 | final: https://www.egalite.org/en/pollution-eea-report/
+title: Air Pollution, Human Health and the Environment. EEA Report - Egalité
+  YEAR: EEA report Consumer Gold Cactus 2024, the black palm awarded by consumers 16 January 2025 'The Last Island', the film about the Lampedusans heroes in the shipwreck of October 3 29 January 2025 Published by Sabrina Bergamini on 25 January 2025 Categories Enviro
+  YEAR: The latest assessment of the health impact of air quality, published in December 2024 by the European Environment Agency (EEA) (1), highlights that almost 240 thousand deaths per year in the EU can be attributed to exposure to fine particulate matter PM 2,5.
+  YEAR: Air pollution and health damage The view comes from the Agency's information note «Harm to human health from air pollution in Europe: burden of disease status 2024» (2024) The data Among other things, in counting the thousands of deaths attributable to polluti
+  YEAR: Zero Pollution The The revised Directive on air quality (Directive (EU) 2024/2881) entered into force on 10 December 2024 and introduces new air quality standards to be achieved by 2030 (4).
+  YEAR: Sabrina Bergamini Note (1) Health and environment impacts of air pollution exposure remain high across Europe https://www.eea.europa.eu/en/newsroom/news/health-and-environment-impacts-of-air-pollution?activeAccordion=da162680-29c7-4202-9c94-a9b540c935e7 (2) Ha
+  YEAR: Cop29, the finance summit ends with little money and much discontent Share Sabrina Bergamini Could it be interesting for you 31 May 2025 Green roofs without soil, sustainable innovation Read more April 18, 2025 Air quality in Europe, pollution still high Read 
+  DATA/LIC: EEA Report - Egalité Select Language Chinese (Simplified) English French German Italian Japanese Russian Spanish The association Context The benefactors The sponsors Reviews Join us Mission Projects Senegal mission The S
+  DATA/LIC: EEA report Home Environment Air pollution, human health and the environment.
+  DATA/LIC: EEA report Consumer Gold Cactus 2024, the black palm awarded by consumers 16 January 2025 'The Last Island', the film about the Lampedusans heroes in the shipwreck of October 3 29 January 2025 Published by Sabrina Bergam
+  DATA/LIC: The latest assessment of the health impact of air quality, published in December 2024 by the European Environment Agency (EEA) (1), highlights that almost 240 thousand deaths per year in the EU can be attributed to expos

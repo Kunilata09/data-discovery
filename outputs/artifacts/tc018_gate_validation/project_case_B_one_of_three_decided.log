@@ -1,0 +1,4 @@
+Discovery run UC1 | model=claude-haiku-5-5 | stages profile..profile | out=/tmp/tc018_project/B
+[profile]
+  totals: {'llm_calls': 0, 'input_tokens': 0, 'output_tokens': 0, 'cache_read_input_tokens': 0, 'tool_calls': 0, 'tool_errors': 0, 'http_requests': 0, 'http_refused': 0}
+No decision for https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sdg_11_52?format=JSON&lang=EN&geo=IT in /tmp/tc018_project/B/gate_decisions.json. Add accept or reject with a reason.

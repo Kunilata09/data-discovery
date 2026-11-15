@@ -1,0 +1,119 @@
+{
+  "candidates": [
+    {
+      "source_id": "internal.airq.station_readings",
+      "kind": "internal",
+      "title": "City station readings (hourly), NO2 and PM2.5 from city monitoring stations",
+      "need_ids": [
+        "N1"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Only internal hourly NO2/PM2.5 source with station_id, UTC hour and ug/m3 units. Catalog temporal coverage starts 2023-01-01, so it covers the 2024-2025 production window but not the 2004-2005 prototype window.",
+      "found_via": "search_internal_catalog 'hourly air quality station readings NO2 PM2.5'; get_catalog_entry; wiki station_network",
+      "location": "azure://valdena-health/env/station_readings (warehouse_sql, request to Environment Monitoring Unit)",
+      "suspected_issues": [
+        "Station VR-03 (Via Roma) switched off 2024-06-30 per wiki station_network, but catalog still lists the network as active and gives no station-status note",
+        "No coordinates field in the catalog entry; station-to-traffic and station-to-weather matching cannot be checked yet",
+        "Timestamps are UTC; traffic counts are local time",
+        "Coverage starts 2023-01-01, so no prototype-window data",
+        "Access requires a request to the Environment Monitoring Unit; not yet delivered"
+      ]
+    },
+    {
+      "source_id": "internal.traffic.hourly_counts",
+      "kind": "internal",
+      "title": "Road traffic counts (hourly) near monitoring stations",
+      "need_ids": [
+        "N2"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Only internal hourly vehicle count source placed near the monitoring stations; catalog coverage from 2021-01-01 spans the production window.",
+      "found_via": "search_internal_catalog 'traffic counts hourly near stations vehicle flow'; get_catalog_entry; wiki counter_replacement_2024",
+      "location": "azure://valdena-health/mobility/traffic_hourly (warehouse_sql, request to Mobility Office)",
+      "suspected_issues": [
+        "Counters replaced 2024-03-18: counts were per direction before and both directions combined after; wiki says not to compare across the change without adjustment, and the catalog has no note on this",
+        "Timestamps are local time (ts_local) while air data is UTC; alignment needed",
+        "No sensor-to-station distance information in the catalog; the 'near the stations' claim is unverified",
+        "Sensor outage gaps not documented"
+      ]
+    },
+    {
+      "source_id": "internal.clinic.resp_visits_daily",
+      "kind": "internal",
+      "title": "Respiratory visits (daily, by district), aggregated counts",
+      "need_ids": [
+        "N4"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Daily respiratory visit counts by district, which is the only clinic data the clinic policy allows for this analysis. Coverage from 2022-01-01 spans the production window.",
+      "found_via": "search_internal_catalog 'respiratory clinic visits daily by district'; get_catalog_entry; wiki clinic_data_policy",
+      "location": "azure://valdena-health/clinic/resp_visits_daily (warehouse_sql, request to Clinical Analytics)",
+      "suspected_issues": [
+        "Unknown whether zero-count days are explicit or missing (catalog does not say)",
+        "Respiratory diagnosis grouping not documented in catalog",
+        "No suppression rule documented for small district counts",
+        "Wiki clinic_data_policy (2025-02-01) confirms this is the only permitted clinic source",
+        "Delivery as aggregated counts still to be confirmed by the clinic"
+      ]
+    },
+    {
+      "source_id": "api.open_meteo_archive",
+      "kind": "public_api",
+      "title": "Open-Meteo Historical Weather API (reanalysis), hourly temperature",
+      "need_ids": [
+        "N3"
+      ],
+      "target_windows": [
+        "prototype",
+        "production"
+      ],
+      "why_relevant": "Only registered hourly temperature source covering both windows; approved for prototyping and production.",
+      "found_via": "list_external_register",
+      "location": "https://archive-api.open-meteo.com/v1/archive",
+      "suspected_issues": [
+        "Relative humidity is not in the configured variables (temperature_2m, shortwave_radiation); humidity coverage gap, do not change variables",
+        "Register default coordinates are Milan (45.4642, 9.19), while the brief refers to a Lisbon default; the client location must be chosen and recorded as an assumption in decisions.md",
+        "Reanalysis is modelled, not station-observed",
+        "Query timezone is UTC; align to local time for traffic and clinic data",
+        "Confirm terms page (https://open-meteo.com/en/licence) before production use"
+      ]
+    }
+  ],
+  "rejected_without_profiling": [
+    {
+      "source_id": "vendor.atmosdata_pro",
+      "reason": "Expired agreement: contract AD-2021-114 ran 2022-01-01 to 2025-12-31, renewal pending with Procurement, no signed renewal on file; API key revoked 2026-01-01. Not usable for production; not profiled. Would have been an N3 weather source."
+    },
+    {
+      "source_id": "api.nager_public_holidays",
+      "reason": "Register entry excludes UC1: no UC1 need uses public holidays (register excluded_by_use_case)."
+    },
+    {
+      "source_id": "internal.clinic.patient_visits",
+      "reason": "Scope and privacy finding: patient-level visit records (N5, out of scope by brief). Excluded by wiki clinic_data_policy. Not opened or profiled; the search tool reported one withheld out-of-scope hit."
+    }
+  ],
+  "searches_run": [
+    "hourly air quality station readings NO2 PM2.5",
+    "traffic counts hourly near stations vehicle flow",
+    "hourly weather station temperature humidity",
+    "respiratory clinic visits daily by district",
+    "national mortality attributable to PM2.5 deaths annual Italy",
+    "list_external_register",
+    "Valdena health office UC1 air quality data requests and red flags",
+    "relative humidity hourly observations",
+    "health impact air pollution attributable deaths yearly national context"
+  ],
+  "unmet_needs": [
+    "N1 prototype: no internal or register source covers 2004-03-10 to 2005-04-04; a public Italian hourly NO2/PM2.5 series must be supplied as a human link (no registered approval), and its station coverage and hourly completeness are unverified",
+    "N6 prototype: no internal or register source; a human-supplied national link (e.g. Istat or EEA health-impact table) would be needed",
+    "N6 production: no internal or register source; a human-supplied national link (e.g. Istat or EEA health-impact table) would be needed",
+    "N5 production: OUT OF SCOPE by brief (individual patient records); not searched or opened. Scope and privacy finding: clinic.patient_visits exists and is excluded by clinic_data_policy"
+  ]
+}

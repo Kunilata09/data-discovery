@@ -1,0 +1,123 @@
+{
+  "source_id": "internal.clinic.resp_visits_daily",
+  "kind": "internal",
+  "title": "Respiratory visits (daily, by district)",
+  "summary": "Internal daily counts of respiratory clinic visits per district, one row per day and district, with three columns: visit_date, district and visit_count. The catalog states it contains no patient identifiers. Owned by Clinical Analytics, with coverage from 2022-01-01 and an open end date, refreshed daily (last refresh 2026-10-14). The wiki clinic data policy names it as the only clinic source permitted for this surveillance analysis.",
+  "schema": {
+    "documented": "structured",
+    "field_count": 3,
+    "fields": [
+      {
+        "name": "visit_date",
+        "type": "date",
+        "description": "Day of the visits",
+        "pii": false,
+        "unit": null
+      },
+      {
+        "name": "district",
+        "type": "string",
+        "description": "District of residence",
+        "pii": false,
+        "unit": null
+      },
+      {
+        "name": "visit_count",
+        "type": "integer",
+        "description": "Respiratory visits that day",
+        "pii": false,
+        "unit": "visits per day per district"
+      }
+    ],
+    "notes": "Columns and types from catalog entry. No diagnosis grouping, district code list or zero-count convention is documented."
+  },
+  "temporal": {
+    "start": "2022-01-01",
+    "end": null,
+    "grain": "daily",
+    "metadata_last_updated": "2026-10-14",
+    "open_ended": true,
+    "refresh_cadence": "daily"
+  },
+  "spatial": {
+    "coverage": [
+      "IT"
+    ],
+    "code_system": "free-text district names (not verified; no district code list documented)",
+    "notes": "Client area is Valdena (fictional, northern Italy). The district field is described as district of residence; its values and coding are not documented in the catalog."
+  },
+  "ownership": {
+    "owner": "Clinical Analytics",
+    "publisher": null,
+    "steward": "Steward named in catalog entry (individual name not recorded here)"
+  },
+  "licence": {
+    "name": "internal",
+    "agreement_status": null,
+    "attribution_text": null,
+    "commercial_use": "not_applicable",
+    "evidence": "get_catalog_entry internal.clinic.resp_visits_daily: classification 'internal'; no separate licence field. Use is restricted by the wiki clinic_data_policy (owner Data Protection Office, last edited 2025-02-01).",
+    "url": null,
+    "mixed_sources": false
+  },
+  "access": {
+    "method": "warehouse_sql",
+    "auth_required": true,
+    "reachable": null,
+    "classification": "internal",
+    "approx_size_bytes": null,
+    "request_process": "Request to Clinical Analytics (catalog access.request_process)"
+  },
+  "declared_metadata": {
+    "contains_pii": false,
+    "status": "active",
+    "classification": "internal",
+    "row_count_approx": 40000,
+    "refresh_cadence": "daily",
+    "has_missing_values": null
+  },
+  "documentation_excerpts": [
+    "Respiratory clinic visits counted per day and per district. Contains no patient identifiers. (catalog description)",
+    "Only daily counts by district (`clinic.resp_visits_daily`) may be used for this purpose. (wiki clinic_data_policy, last_edited 2025-02-01)",
+    "Patient postcode and age band are personal data. They must not leave the clinic systems for analysis. (wiki clinic_data_policy)"
+  ],
+  "quality_notes": [
+    "Not sampled: the warehouse is only reachable by request to Clinical Analytics, so no data was read and reachability is unconfirmed.",
+    "Zero-count convention unknown: the catalog does not say whether days with zero visits are explicit rows or missing rows.",
+    "Respiratory diagnosis grouping (which codes count as respiratory) is not documented.",
+    "No small-count suppression rule is documented for district-day counts.",
+    "row_count_approx 40000 is stated in the catalog but cannot be checked against the number of districts or days without access; it is not verified.",
+    "Catalog and wiki are consistent on scope: the wiki policy restricts use to daily district counts, which matches this entry's grain and columns. The wiki page does not describe the table itself beyond naming it.",
+    "Coverage starts 2022-01-01, so it does not cover the prototype window (2004-03-10 to 2005-04-04); it is relevant only to the production window (2024-01-01 to 2025-12-31), as the candidate states.",
+    "Clinic-side delivery as aggregated counts is still to be confirmed by the clinic (candidate suspected_issues). The catalog itself describes the table as containing no patient identifiers."
+  ],
+  "provenance": [
+    {
+      "claim": "Catalog entry gives owner Clinical Analytics, daily grain, coverage start 2022-01-01 with open end, daily refresh, last refreshed 2026-10-14, approx 40000 rows, columns visit_date, district, visit_count, contains_pii false.",
+      "evidence": "get_catalog_entry internal.clinic.resp_visits_daily"
+    },
+    {
+      "claim": "Wiki policy limits clinic use to daily district counts and bars patient-level records and personal fields from leaving clinic systems; owner Data Protection Office; last edited 2025-02-01.",
+      "evidence": "read_wiki_page clinic_data_policy"
+    },
+    {
+      "claim": "The entry is the wiki-backlinked source for the clinic policy, with no other wiki backlinks.",
+      "evidence": "get_catalog_entry internal.clinic.resp_visits_daily (wiki_backlinks: clinic_data_policy)"
+    },
+    {
+      "claim": "Access is by warehouse_sql request to Clinical Analytics; no data was read in this profile.",
+      "evidence": "get_catalog_entry internal.clinic.resp_visits_daily (access block); no tool call reached the warehouse"
+    }
+  ],
+  "unknowns": [
+    "Whether zero-count days are explicit rows.",
+    "Respiratory diagnosis grouping.",
+    "District code list and values; whether district is a residence or a clinic location (catalog says residence).",
+    "Small-count suppression rule.",
+    "Whether counts are complete for all clinics and all days since 2022-01-01 (no completeness statement).",
+    "Actual row count, file size and whether the warehouse is currently reachable.",
+    "Access approval status and turnaround for the request.",
+    "Whether the clinic will deliver the table as aggregated counts only, as the candidate notes.",
+    "Licence and consent terms beyond the internal policy; no formal agreement document was found."
+  ]
+}
