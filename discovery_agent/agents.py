@@ -1,14 +1,20 @@
 """The five agents: what each may use, what each must return, and how its output is checked."""
 from __future__ import annotations
 
+import json
+import re
+
 from .agent import AgentSpec
 from .config import load_prompt, load_red_flags, load_register, load_schema
+from .guards import excluded_match, excluded_sources, out_of_scope_need_ids, register_name_in, register_name_tokens
 from .tools.internal_catalog import _load_estate
 
 SCOUT_TOOLS = ["search_internal_catalog", "get_catalog_entry", "read_wiki_page", "list_external_register"]
 PROFILER_TOOLS = ["get_catalog_entry", "read_wiki_page", "search_internal_catalog", "list_external_register", "call_public_api",
                   "inspect_dataset_link", "sample_data_file", "probe_url", "summarize_datapackage", "summarize_jsonstat"]
 RISK_TOOLS = ["read_wiki_page", "get_catalog_entry"]
+# An unmet-needs entry must start with the need and window it reports, e.g. "N1 prototype: no source ...".
+UNMET_ENTRY = re.compile(r"^\s*(N\d+)\s+([A-Za-z0-9_-]+)\s*:")
 
 
 def _with_shared(name: str) -> str:
@@ -18,21 +24,58 @@ def _with_shared(name: str) -> str:
 
 def planner_spec(uc: dict, settings: dict) -> AgentSpec:
     need_ids = {n["id"] for n in uc["needs"]}
+    register = load_register(uc["id"])
+    kinds = {s["id"]: s["kind"] for s in register}
+    data_ids = {i for i, k in kinds.items() if k in ("public_api", "vendor_feed")}
+    names = register_name_tokens(register)
+    excl = excluded_sources(uc)
 
     def covers_all_needs(p: dict) -> list[str]:
         got = {n["need_id"] for n in p["need_plans"]}
         return [f"need_plans is missing {sorted(need_ids - got)}"] if need_ids - got else []
 
+    def register_ids_are_data_sources(p: dict) -> list[str]:
+        return [f"{n['need_id']}: register_ids entry {rid!r} is not a public API or vendor feed tagged for {uc['id']}. "
+                "Policy entries are not data sources; datasets come from links at the candidate gate."
+                for n in p["need_plans"] for rid in n["register_ids"] if rid not in data_ids]
+
+    def excluded_sources_are_not_mapped(p: dict) -> list[str]:
+        return [f"{n['need_id']}: register_ids entry {rid!r} is excluded for {uc['id']} by the use-case contract "
+                f"({excl[rid]}). Do not map it to any need."
+                for n in p["need_plans"] for rid in n["register_ids"] if rid in excl]
+
+    def vendor_feeds_are_mapped(p: dict) -> list[str]:
+        mapped = {rid for n in p["need_plans"] for rid in n["register_ids"]}
+        return [f"{sid}: vendor feed tagged for {uc['id']} must appear in register_ids of the need(s) it could serve, "
+                "even when its agreement is expired. The Scout reports it as a finding; it is not left out."
+                for sid, kind in kinds.items() if kind == "vendor_feed" and sid not in mapped and sid not in excl]
+
+    def no_register_names_in_queries(p: dict) -> list[str]:
+        errs = []
+        for n in p["need_plans"]:
+            for q in n["internal_queries"]:
+                rid = register_name_in(q, names)
+                if rid:
+                    errs.append(f"{n['need_id']}: internal query {q!r} names the register source {rid!r}. Register sources "
+                                "go in register_ids. internal_queries search the internal catalog and wiki only.")
+        return errs
+
     return AgentSpec("planner", _with_shared("planner"), ["list_external_register"], "submit_search_plan",
                      "Submit the search plan. Call exactly once, when complete.", load_schema("search_plan"),
-                     settings["agents"]["max_turns"]["planner"], [covers_all_needs])
+                     settings["agents"]["max_turns"]["planner"],
+                     [covers_all_needs, register_ids_are_data_sources, excluded_sources_are_not_mapped,
+                      vendor_feeds_are_mapped, no_register_names_in_queries])
 
 
-def scout_spec(uc: dict, settings: dict) -> AgentSpec:
+def scout_spec(uc: dict, settings: dict, plan: dict | None = None) -> AgentSpec:
     est = _load_estate(str(uc["internal_path"]))
-    register_ids = {s["id"] for s in load_register(uc["id"]) if s["kind"] in ("public_api", "vendor_feed")}
+    register = load_register(uc["id"])
+    register_ids = {s["id"] for s in register if s["kind"] in ("public_api", "vendor_feed")}
+    vendor_ids = {s["id"] for s in register if s["kind"] == "vendor_feed"}
+    planned_vendors = {rid for n in (plan or {}).get("need_plans", []) for rid in n["register_ids"] if rid in vendor_ids}
     windows = {w["id"] for w in uc["windows"]}
     needs = {n["id"] for n in uc["needs"]}
+    needs_windows = {(n["id"], w) for n in uc["needs"] for w in n["windows"]}
     max_c = settings["agents"]["max_candidates"]
 
     def ids_exist(p: dict) -> list[str]:
@@ -63,9 +106,82 @@ def scout_spec(uc: dict, settings: dict) -> AgentSpec:
                         "Keep the strongest; list the rest in rejected_without_profiling")
         return errs
 
+    def planned_vendors_accounted(p: dict) -> list[str]:
+        accounted = {c["source_id"] for c in p["candidates"]} | {r["source_id"] for r in p.get("rejected_without_profiling") or []}
+        return [f"{v}: the search plan maps this vendor feed to a need, so it must appear as a candidate (with its agreement "
+                "status) or in rejected_without_profiling with a reason. It must not silently disappear."
+                for v in sorted(planned_vendors - accounted)]
+
+    def candidates_in_scope(p: dict) -> list[str]:
+        """Excluded sources and out-of-scope needs or records never become candidates. Policy documents are not
+        candidates, so they stay readable through read_wiki_page and the search."""
+        errs = []
+        for c in p["candidates"]:
+            sid = c["source_id"]
+            if sid in excluded_sources(uc):
+                errs.append(f"{sid}: excluded for {uc['id']} by the use-case contract. Do not submit it; "
+                            "it is not a candidate for any need.")
+            out = sorted(set(c["need_ids"]) & out_of_scope_need_ids(uc))
+            if out:
+                errs.append(f"{sid}: serves {out}, which the use-case contract marks out_of_scope. Remove those need ids, "
+                            "and record the scope restriction in unmet_needs.")
+            if sid.startswith("internal."):
+                entry = est["entries"].get(sid.removeprefix("internal."))
+                need = excluded_match(json.dumps(entry), uc) if entry else None
+                if need:
+                    errs.append(f"{sid}: describes records excluded by the scope of {need}. Do not submit it. Record the "
+                                "restriction in unmet_needs.")
+        return errs
+
+    def unmet_are_genuine_gaps(p: dict) -> list[str]:
+        covered = {(nid, w) for c in p["candidates"] for nid in c["need_ids"] for w in c["target_windows"]}
+        errs = []
+        for u in p["unmet_needs"]:
+            m = UNMET_ENTRY.match(u)
+            if not m:
+                errs.append(f"unmet_needs entry {u[:60]!r} must start with '<need id> <window id>:', e.g. 'N1 prototype: ...'")
+                continue
+            pair = (m.group(1), m.group(2))
+            if pair not in needs_windows:
+                errs.append(f"unmet_needs entry {pair[0]} {pair[1]}: that need is not required for that window "
+                            "(see the need's windows in the spec). It is not a gap; remove it.")
+            elif pair in covered:
+                errs.append(f"unmet_needs entry {pair[0]} {pair[1]}: a candidate already covers it. Record the weakness "
+                            "in suspected_issues, not in unmet_needs.")
+        return errs
+
+    def unmet_cover_every_gap(p: dict) -> list[str]:
+        """Completeness: every required need-window that no candidate covers must be listed in unmet_needs."""
+        covered = {(nid, w) for c in p["candidates"] for nid in c["need_ids"] for w in c["target_windows"]}
+        listed = {(m.group(1), m.group(2)) for u in p["unmet_needs"] if (m := UNMET_ENTRY.match(u))}
+        return [f"{nid} {w}: a required need-window with no candidate is missing from unmet_needs. "
+                f"Add '{nid} {w}: <why no source covers it>'."
+                for nid, w in sorted(needs_windows - covered - listed)]
+
     return AgentSpec("scout", _with_shared("scout"), SCOUT_TOOLS, "submit_candidates",
                      "Submit the candidate source list. Call exactly once, when your search is complete.",
-                     load_schema("candidates"), settings["agents"]["max_turns"]["scout"], [ids_exist])
+                     load_schema("candidates"), settings["agents"]["max_turns"]["scout"],
+                     [ids_exist, planned_vendors_accounted, candidates_in_scope, unmet_are_genuine_gaps, unmet_cover_every_gap])
+
+
+#: declared_metadata flags that the risk rules read as a publisher's own claim (GOV-PII reads contains_pii;
+#: DQ-METADATA-CONTRADICTION reads has_missing_values). A non-null value must come from a tool result that
+#: actually contains the key (TC-022; contains_pii added after the UC2 Nager record was found unsupported).
+PUBLISHER_FLAGS_NEEDING_EVIDENCE = ("has_missing_values", "contains_pii")
+
+
+def declared_flags_are_stated(payload: dict, evidence: frozenset) -> list[str]:
+    """A declared flag is the source's claim, so the source's own tool results must contain it.
+    `missing_cells: 0` in a count does not show that the source says it has no missing values."""
+    declared = payload.get("declared_metadata") or {}
+    errs = []
+    for key in PUBLISHER_FLAGS_NEEDING_EVIDENCE:
+        value = declared.get(key)
+        if value is not None and key not in evidence:
+            errs.append(f"declared_metadata.{key} is {value!r}, but no tool result for this source "
+                        f"contains a {key!r} field. Set it to null, and put what the sample or counts "
+                        "show in sample_findings or quality_notes.")
+    return errs
 
 
 def profiler_spec(uc: dict, settings: dict, candidate: dict) -> AgentSpec:
@@ -82,7 +198,8 @@ def profiler_spec(uc: dict, settings: dict, candidate: dict) -> AgentSpec:
 
     return AgentSpec("profiler", _with_shared("profiler"), PROFILER_TOOLS, "submit_catalog_record",
                      "Submit the catalog record for this one source. Call exactly once.",
-                     load_schema("catalog_record"), settings["agents"]["max_turns"]["profiler"], [matches_candidate])
+                     load_schema("catalog_record"), settings["agents"]["max_turns"]["profiler"], [matches_candidate],
+                     evidence_validators=[declared_flags_are_stated])
 
 
 def risk_spec(uc: dict, settings: dict, records: list[dict], rule_flags: dict[str, list[dict]]) -> AgentSpec:

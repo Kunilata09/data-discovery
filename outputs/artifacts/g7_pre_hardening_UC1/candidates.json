@@ -1,0 +1,155 @@
+{
+  "candidates": [
+    {
+      "source_id": "internal.airq.station_readings",
+      "kind": "internal",
+      "title": "City station readings (hourly), NO2 and PM2.5",
+      "need_ids": [
+        "N1"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Hourly NO2 and PM2.5 from the city's own stations, covering 2023-01-01 onward, so it spans the production window 2024-01-01 to 2025-12-31. Grain and pollutants match N1.",
+      "found_via": "search 'hourly air quality station readings NO2 PM2.5'; get_catalog_entry airq.station_readings; read_wiki_page station_network",
+      "suspected_issues": [
+        "Station VR-03 (Via Roma) switched off 2024-06-30 per wiki station_network, yet catalog still lists the network as active; no VR-03 readings after that date",
+        "Timestamps are UTC (ts_utc); must align with local-time traffic counts and weather",
+        "No station coordinates or location field in the catalog entry; station-to-traffic and station-to-weather join not documented",
+        "Access by request to Environment Monitoring Unit (warehouse SQL); receipt not confirmed",
+        "Catalog coverage does not reach 2004-2005; prototype window needs a public source"
+      ],
+      "location": "azure://valdena-health/env/station_readings",
+      "canonical_ref": "airq.station_readings"
+    },
+    {
+      "source_id": "internal.traffic.hourly_counts",
+      "kind": "internal",
+      "title": "Road traffic counts (hourly)",
+      "need_ids": [
+        "N2"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Hourly vehicle counts from road counters near the monitoring stations, with coverage from 2021-01-01; the only traffic dataset found in the catalog for N2.",
+      "found_via": "search 'traffic counts hourly loop detectors'; get_catalog_entry traffic.hourly_counts; read_wiki_page counter_replacement_2024",
+      "suspected_issues": [
+        "Road counters replaced 2024-03-18: counts per direction before, both directions combined after; wiki says do not compare without adjustment and the catalog has no note of this",
+        "Timestamps are local time (ts_local), not UTC as in air-quality data",
+        "No documented join key between counter_id and N1 station codes; distance from stations not stated",
+        "Sensor outage/gap rates not documented",
+        "Access by request to Mobility Office"
+      ],
+      "location": "azure://valdena-health/mobility/traffic_hourly",
+      "canonical_ref": "traffic.hourly_counts"
+    },
+    {
+      "source_id": "internal.clinic.resp_visits_daily",
+      "kind": "internal",
+      "title": "Respiratory visits (daily, by district)",
+      "need_ids": [
+        "N4"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Daily respiratory visit counts by district, documented as containing no patient identifiers. It is the only clinic dataset the Data Protection wiki allows for this analysis.",
+      "found_via": "search 'respiratory clinic visits daily count district'; get_catalog_entry clinic.resp_visits_daily; read_wiki_page clinic_data_policy",
+      "suspected_issues": [
+        "Catalog coverage starts 2022-01-01; covers production window 2024-2025",
+        "Small-cell suppression rule not documented",
+        "District codes: no published geography link documented",
+        "Late capture of recent days not documented",
+        "Clinical respiratory definition (ICD range) not documented",
+        "Access by request to Clinical Analytics"
+      ],
+      "location": "azure://valdena-health/clinic/resp_visits_daily",
+      "canonical_ref": "clinic.resp_visits_daily"
+    },
+    {
+      "source_id": "api.open_meteo_archive",
+      "kind": "public_api",
+      "title": "Open-Meteo Historical Weather API (reanalysis)",
+      "need_ids": [
+        "N3"
+      ],
+      "target_windows": [
+        "prototype",
+        "production"
+      ],
+      "why_relevant": "Hourly reanalysis weather for any coordinates; approved for prototyping and production. Serves the temperature part of N3 for both windows.",
+      "found_via": "list_external_register",
+      "suspected_issues": [
+        "Register default_query coordinates (45.4642, 9.1900) are Milan, not the client location; Italian coordinates must be set and justified in decisions.md (no source names the client city)",
+        "Configured hourly variables are temperature_2m and shortwave_radiation only; relative humidity is NOT configured, so N3 humidity is a coverage gap",
+        "Reanalysis grid cell is coarser than a city station",
+        "Default timezone is UTC; must align with air-quality ts_utc and local-time traffic"
+      ],
+      "location": "https://archive-api.open-meteo.com/v1/archive",
+      "canonical_ref": "api.open_meteo_archive"
+    },
+    {
+      "source_id": "vendor.atmosdata_pro",
+      "kind": "vendor_feed",
+      "title": "AtmosData Pro station-grade weather feed (fictional vendor)",
+      "need_ids": [
+        "N3"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Station-grade weather feed that could supply production-window temperature and humidity; the only register source named for station-grade production weather.",
+      "found_via": "list_external_register",
+      "suspected_issues": [
+        "BLOCKED: agreement_status expired; contract AD-2021-114 ran 2022-01-01 to 2025-12-31; renewal waiting on Procurement, no signed renewal on file",
+        "API key revoked 2026-01-01",
+        "approved_purposes empty; not usable for any window",
+        "Do not use for production weather unless a signed renewal is recorded"
+      ],
+      "location": "https://api.atmosdata.example/v2/observations",
+      "canonical_ref": "vendor.atmosdata_pro"
+    },
+    {
+      "source_id": "api.nager_public_holidays",
+      "kind": "public_api",
+      "title": "Nager.Date public holidays API",
+      "need_ids": [
+        "N4"
+      ],
+      "target_windows": [
+        "production"
+      ],
+      "why_relevant": "Public-holiday calendar, usable as a covariate for daily clinic counts (counts drop on holidays). Set country to IT for 2024 and 2025.",
+      "found_via": "list_external_register",
+      "suspected_issues": [
+        "Country parameter must be set to IT; register param_notes give example codes only",
+        "Holidays are a covariate only; they do not supply clinic counts"
+      ],
+      "location": "https://date.nager.at/api/v3/PublicHolidays/{year}/{country}",
+      "canonical_ref": "api.nager_public_holidays"
+    }
+  ],
+  "searches_run": [
+    "hourly air quality station readings NO2 PM2.5",
+    "ARPA station concentrations archive",
+    "air quality production feed 2024 2025",
+    "traffic counts hourly loop detectors",
+    "hourly weather temperature humidity station",
+    "respiratory clinic visits daily count district",
+    "national deaths PM2.5 yearly",
+    "list_external_register",
+    "get_catalog_entry airq.station_readings",
+    "get_catalog_entry traffic.hourly_counts",
+    "get_catalog_entry clinic.resp_visits_daily",
+    "read_wiki_page station_network",
+    "read_wiki_page counter_replacement_2024",
+    "read_wiki_page clinic_data_policy"
+  ],
+  "unmet_needs": [
+    "N1 prototype: no internal or register source covers hourly NO2/PM2.5 for 2004-03-10 to 2005-04-04; a public dataset must be supplied as a link (internal catalog starts 2023-01-01)",
+    "N6 prototype: no internal or register source for national PM2.5-attributable deaths; a public EEA/WHO/ISTAT dataset must be supplied as a link",
+    "N6 production: no internal or register source for national PM2.5-attributable deaths; a public dataset must be supplied as a link",
+    "N5 production: OUT OF SCOPE by brief; patient-level records were not searched, opened or profiled. Scope and privacy finding: wiki clinic_data_policy names clinic.patient_visits as barred from this analysis; one catalog hit was withheld as withheld_out_of_scope and not opened"
+  ]
+}

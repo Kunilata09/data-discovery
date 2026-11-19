@@ -1,0 +1,228 @@
+{
+ "agent": "profiler__internal.sales.daily_by_product",
+ "system": "# Operating rules (all discovery agents)\n\nYou are one agent in a data-discovery system. The goal is to locate, catalog and assess the feasibility of data sources for a business problem **before any pipeline is built**.\n\n- **Metadata first, then a small sample, never the whole dataset.** Work from catalog entries, wiki pages, API metadata, landing pages, descriptors and terms pages. You may read a capped sample of a data file with `sample_data_file` to check structure and quality, but never try to download a whole dataset. Do not copy personal data (names, emails, addresses, ids) into your output.\n- **Provenance.** Every claim you make about a source must be traceable to a tool call (tool name and argument), a URL, a catalog field or a wiki page id.\n- **Unknown stays unknown.** If no source states a licence, owner, refresh cadence, consent or coverage date, record null or \"unknown\" and say so. Never infer one from what is typical.\n- **Guardrails are findings.** A refused host (DOMAIN_NOT_ALLOWLISTED), a timeout, a 401/403, an expired agreement or a restricted table is evidence to record. Do not look for another route to the same data.\n- **Documentation beats catalog metadata when it is more specific or more recent.** When they disagree, record both, with dates.\n- **Be economical.** Use the fewest tool calls that answer the question, and run independent calls in parallel. Stop when you have enough evidence, and finish by calling your submit tool.\n\n\n# Role: Profiler\n\nYou profile **one** candidate source and return a **catalog record**: an auto-generated summary of schema, freshness, ownership, licence, access and documented quality issues, with provenance for every claim.\n\nWhat to gather, by kind:\n- **internal**: `get_catalog_entry` (all fields), then every wiki backlink and related doc with `read_wiki_page`. Record catalog vs wiki disagreements in `quality_notes`, quoting both sides with dates. Internal sources have `licence.name = \"internal\"` and `commercial_use = \"not_applicable\"`.\n- **public_api**: `list_external_register` for the endpoint, then one or two small `call_public_api` probes to check that it responds and which period it covers (probe both ends of the needed windows if coverage is in doubt). The per-call `query` may set dates and coordinates only. The register fixes the variable lists (`hourly`, `daily`, `current`), and the tool refuses any change to them. If a needed variable is missing from the register's variables, do not add it: record the gap in `unknowns` and `quality_notes`, and say which variable is missing. Read the provider's terms with `probe_url` on `terms_url` and record the licence and its exact source.\n- **vendor_feed**: read the register entry. Do not try to call it. Record the agreement status and detail in `licence.agreement_status`, and set `access.reachable` to false when credentials are revoked or not issued.\n- **dataset_link** (any URL a human supplied; the link can point anywhere):\n  1. `inspect_dataset_link` on the link. It tells you the link type and gives metadata, licence evidence, files and next steps.\n  2. By link type:\n     - `uci_dataset_page`: read `metadata` (declared flags, notes, variables). If `data_url` exists, `sample_data_file` on it. Otherwise the data is only in an archive: describe the schema from the metadata and say the sample was not possible.\n     - `landing_page` (portals such as Kaggle, Zenodo, data.gov, CKAN or Hugging Face): read `jsonld_datasets` first (licence, dates, coverage, distribution), then `meta_description` and `text_start`. Pick the most specific data file from the distribution or `data_links` and `sample_data_file` it, if its host is allowlisted. If downloads need a login or subscription, set `access.auth_required = true`.\n     - `frictionless_datapackage`: `summarize_datapackage` with a `field_filter` for the use case's geography (e.g. the country code prefix the use case needs). Never sample the large CSVs it lists.\n     - `json_stat`: read the summary (dimensions, time, geo codes, warnings).\n     - `data_file`: the sample profile is already in the result. Find documentation for the file (repository README, parent page) if you can, using `probe_url`.\n     - `json_api`: use the shape and dates found. One more call at most.\n     - `login_wall` / `unreachable` / a refused host: record `access.reachable = false` (or `auth_required = true` for a login wall), say which host or credential would be needed, and stop.\n  3. Licence: use the licence from `inspect_dataset_link` and say where it was found (`found_in`). If none was found, look once on the provider's terms page with `probe_url`. Otherwise record null. Never assume a portal's usual licence.\n  4. Copy `canonical_ref` from `inspect_dataset_link` into the record.\n  5. Put what the **sample** showed in `sample_findings`, naming the column: sentinel values, negative quantities, zero shares, odd value sets (country spellings), date formats, personal-looking columns. A sample's date range is the range of the first rows only: take `temporal.start/end` from the documentation, not from the sample, unless the sample is the whole file.\n  6. Decide what the data **is**: entity, grain, period, geography, population. The Risk Assessor judges fit from this.\n\nField rules:\n- `temporal.start` / `temporal.end` are ISO dates (YYYY-MM-DD) of the **data period**. Use `end = null` only for sources that are still updating. `grain` is one of the schema's values.\n- `access.approx_size_bytes`: the largest file or table size you found stated (descriptor bytes, content-length, row counts x width if stated), else null.\n- `access.reachable = false` if the link itself (or its metadata) could not be reached, the host was refused, or the store cannot be restored. A data file that timed out or is an archive that cannot be sampled does NOT make the source unreachable when its metadata was read; note it in `quality_notes`.\n- `licence.mixed_sources = true` when different fields or files come from upstream providers with different terms.\n- `spatial.code_system`: how places are identified (ISO2, ISO3, free-text country names, Eurostat codes, ...). This decides whether joins will work.\n- `schema.documented`: \"structured\" when fields come with names and types, \"free_text_only\" when they are only described in prose, \"none\" otherwise.\n- At least three `provenance` entries. Put everything you could not establish in `unknowns`.\n",
+ "messages": [
+  {
+   "role": "user",
+   "content": "<use_case_spec>\n{\n \"id\": \"UC2\",\n \"title\": \"Ice-cream sales: do hot days and public holidays raise our sales?\",\n \"client\": \"Valdena Gelato Shop (fictional, northern Italy)\",\n \"as_of\": \"2026-10-15\",\n \"geography\": {\n  \"primary\": [\n   \"IT\"\n  ],\n  \"secondary\": []\n },\n \"windows\": [\n  {\n   \"id\": \"history\",\n   \"start\": \"2023-06-01\",\n   \"end\": \"2025-05-31\",\n   \"purpose\": \"Two summers of daily sales, to see how weather and holidays affect them.\"\n  },\n  {\n   \"id\": \"recent\",\n   \"start\": \"2025-06-01\",\n   \"end\": \"2026-03-31\",\n   \"purpose\": \"The most recent months, to check that the pattern still holds.\"\n  }\n ],\n \"needs\": [\n  {\n   \"id\": \"N1\",\n   \"name\": \"Daily ice-cream sales by product\",\n   \"priority\": \"must\",\n   \"min_grain\": \"daily\",\n   \"windows\": [\n    \"history\",\n    \"recent\"\n   ]\n  },\n  {\n   \"id\": \"N2\",\n   \"name\": \"Mapping of product codes before and after the 2024 code change\",\n   \"priority\": \"must\",\n   \"min_grain\": \"static\",\n   \"windows\": [\n    \"history\"\n   ]\n  },\n  {\n   \"id\": \"N3\",\n   \"name\": \"Daily maximum temperature\",\n   \"priority\": \"must\",\n   \"min_grain\": \"daily\",\n   \"windows\": [\n    \"history\",\n    \"recent\"\n   ]\n  },\n  {\n   \"id\": \"N4\",\n   \"name\": \"Public holidays in Italy\",\n   \"priority\": \"should\",\n   \"min_grain\": \"daily\",\n   \"windows\": [\n    \"history\",\n    \"recent\"\n   ]\n  },\n  {\n   \"id\": \"N5\",\n   \"name\": \"Shop opening days and local events\",\n   \"priority\": \"should\",\n   \"min_grain\": \"daily\",\n   \"windows\": [\n    \"history\",\n    \"recent\"\n   ]\n  }\n ]\n}\n</use_case_spec>\n\n<candidate>\n{\n \"source_id\": \"internal.sales.daily_by_product\",\n \"kind\": \"internal\",\n \"title\": \"Daily sales by product (sales.daily_by_product)\",\n \"need_ids\": [\n  \"N1\",\n  \"N2\"\n ],\n \"target_windows\": [\n  \"history\",\n  \"recent\"\n ],\n \"why_relevant\": \"Only internal source of daily units_sold and revenue_eur per product_code; catalog grain daily, temporal coverage from 2022-01-01, last refreshed 2026-10-14, so both windows are in range.\",\n \"found_via\": \"search 'daily ice cream sales by product'; get_catalog_entry; wiki backlink till_migration_2024\",\n \"location\": \"azure://valdena-gelato/sales/daily_by_product\",\n \"canonical_ref\": \"sales.daily_by_product\",\n \"suspected_issues\": [\n  \"Wiki till_migration_2024 (last edited 2024-03-12): no sales recorded 2024-02-05 to 2024-03-10; rows absent and must be treated as missing, not zero\",\n  \"Wiki product_codes_2024 (last edited 2024-04-02): codes changed from 2024-04-01; codes ending in 'L' replaced; no mapping table exists\",\n  \"No closed-day flag in this table; closed days only distinguishable via store.calendar\",\n  \"Refund/void treatment, timezone/cut-off and partial-day status of the recent export not documented in catalog\"\n ]\n}\n</candidate>\n\nProfile this one source and call submit_catalog_record."
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "signature": "CAQSowQKEggTEAEYAjgBQgh0aGlua2luZxIMPpfZC4uKkxh7ixE3GgyHkqa2YcX7edJ9Kz8iMKruO9CDVUkgCgJ7LtQwysX0Pk1O5ozzPY5Vaqq+xrTR4CPmL6UaHIGVop99mIi8wiq+AzvECO0ghQ8cV7jObd0/DRVAHeg5/kluYoryNtyCAiy9ZpRj4EGOExNZl6xWw8gQekKpo06GQRXH8m57ER5ZogTFewsg2Du71eD9VM9TTbrq0sdfDOjm7PRBbMTaU/PS+xWz61r1to8a9a5OAUF98YucZ7V8PUOcu2u2qTdpnPV5bxOmEfcIatCmxDGluPrfIPNmR/P/S1LpCfTvLh/UOO9hGqcD/LA4JgsGGOydcwsrfWftEDFBFv02FBJwXHEce/MYV8fYrVy2n1TWngC4jTRFEXuSAUkdlYL1exg/cAycN7NQ5sFOsYNoQbk0iyH7TawMyjONVcpxaCb7pAIo6hIu+6Aju0wmcfgMKQtkCvo4OPxRCGeNhOXImvZI2/5zRllxrececI3QCI/p+7D1y2qFscUU9bdHekDFwKOHpvDACCaqYyzIyXZum+VYa4/4/PlM3ssXqcxOcom6uByvPznnXne0v7xepWdC5rY/9hKfSErKGXnwEmpv7PagHsciEl8t24HYc/vQK1gyZ5FBuTNZfaDiyZNJNU6mDIuUQ59V8nuGQWe/QuDE5tKrxbEA7RvbY2IFgHDaA4kRHviaGAE=",
+     "thinking": "",
+     "type": "thinking"
+    },
+    {
+     "id": "toolu_bdrk_01FjhRDcN3r2V6urA9ur1gdD",
+     "input": {
+      "entry_id": "internal.sales.daily_by_product"
+     },
+     "name": "get_catalog_entry",
+     "type": "tool_use"
+    },
+    {
+     "id": "toolu_bdrk_01GNAJK3iByJ1bz3GmARXf2g",
+     "input": {
+      "page_id": "till_migration_2024"
+     },
+     "name": "read_wiki_page",
+     "type": "tool_use"
+    },
+    {
+     "id": "toolu_bdrk_014tJLv59d32NyRCBHVJuxUN",
+     "input": {
+      "page_id": "product_codes_2024"
+     },
+     "name": "read_wiki_page",
+     "type": "tool_use"
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_bdrk_01FjhRDcN3r2V6urA9ur1gdD",
+     "content": "{\"source_id\": \"internal.sales.daily_by_product\", \"entry\": {\"id\": \"sales.daily_by_product\", \"display_name\": \"Daily sales by product\", \"description\": \"Units sold and revenue per product per day, from the till system.\", \"domain\": \"Retail\", \"owner\": \"Retail Operations\", \"steward\": \"Marco Bianchi\", \"status\": \"active\", \"classification\": \"confidential\", \"contains_pii\": false, \"grain\": \"daily\", \"temporal_coverage\": {\"start\": \"2022-01-01\", \"end\": null}, \"refresh_cadence\": \"daily\", \"last_refreshed\": \"2026-10-14\", \"location\": \"azure://valdena-gelato/sales/daily_by_product\", \"access\": {\"method\": \"warehouse_sql\", \"request_process\": \"Request to Retail Operations\"}, \"row_count_approx\": 310000, \"columns\": [{\"name\": \"sale_date\", \"type\": \"date\", \"description\": \"Day of sale\", \"pii\": false}, {\"name\": \"product_code\", \"type\": \"string\", \"description\": \"Product code, see the product list\", \"pii\": false}, {\"name\": \"units_sold\", \"type\": \"integer\", \"description\": \"Units sold that day\", \"pii\": false}, {\"name\": \"revenue_eur\", \"type\": \"numeric\", \"description\": \"Revenue in euros that day\", \"pii\": false}]}, \"wiki_backlinks\": [\"till_migration_2024\"], \"catalog_exported_at\": \"2026-10-14T06:00:00Z\"}"
+    },
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_bdrk_01GNAJK3iByJ1bz3GmARXf2g",
+     "content": "{\"page_id\": \"till_migration_2024\", \"title\": \"Till system replacement (2024)\", \"owner\": \"Retail Operations\", \"last_edited\": \"2024-03-12\", \"body\": \"# Till system replacement (2024)\\n- The till system was replaced between 2024-02-05 and 2024-03-10.\\n- No sales were recorded in that period. Treat those days as missing, not as zero sales.\\n- `sales.daily_by_product` has no rows for those days.\"}"
+    },
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_bdrk_014tJLv59d32NyRCBHVJuxUN",
+     "content": "{\"page_id\": \"product_codes_2024\", \"title\": \"Product code change (2024)\", \"owner\": \"Retail Operations\", \"last_edited\": \"2024-04-02\", \"body\": \"# Product code change (2024)\\n- From 2024-04-01, product codes changed. Codes ending in \\\"L\\\" were replaced by new codes.\\n- No mapping table exists between the old and new codes.\\n- Old and new codes can only be matched by product name, and some names are not unique.\\n- `sales.products` lists only the current codes.\"}"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "signature": "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",
+     "thinking": "",
+     "type": "thinking"
+    },
+    {
+     "id": "toolu_bdrk_01T7LzEn5xns5C3yEwaG8oLM",
+     "input": {
+      "source_id": "internal.sales.daily_by_product",
+      "kind": "internal",
+      "title": "Daily sales by product (sales.daily_by_product)",
+      "summary": "Till-system table of units sold and revenue in euros per product code per day, owned by Retail Operations (steward Marco Bianchi), status active. Catalog declares grain daily, coverage from 2022-01-01 with no end date, daily refresh, last refreshed 2026-10-14, about 310,000 rows. The wiki documents a gap in sales from 2024-02-05 to 2024-03-10 (rows absent, not zero) and a product-code change from 2024-04-01 with no mapping table, so the history window needs both corrections before use.",
+      "schema": {
+       "documented": "structured",
+       "field_count": 4,
+       "fields": [
+        {
+         "name": "sale_date",
+         "type": "date",
+         "description": "Day of sale",
+         "pii": false,
+         "unit": null
+        },
+        {
+         "name": "product_code",
+         "type": "string",
+         "description": "Product code, see the product list",
+         "pii": false,
+         "unit": null
+        },
+        {
+         "name": "units_sold",
+         "type": "integer",
+         "description": "Units sold that day",
+         "pii": false,
+         "unit": "units"
+        },
+        {
+         "name": "revenue_eur",
+         "type": "numeric",
+         "description": "Revenue in euros that day",
+         "pii": false,
+         "unit": "EUR"
+        }
+       ],
+       "notes": "No closed-day flag, store identifier or refund/void indicator in the catalog columns. The product list (sales.products) lists only current codes, per wiki product_codes_2024."
+      },
+      "temporal": {
+       "start": "2022-01-01",
+       "end": null,
+       "grain": "daily",
+       "metadata_last_updated": "2026-10-14",
+       "open_ended": true,
+       "refresh_cadence": "daily"
+      },
+      "spatial": {
+       "coverage": [
+        "IT"
+       ],
+       "code_system": "free-text store/shop (single shop; no geographic code field in catalog columns)",
+       "notes": "Catalog does not state the store location explicitly; the use case describes Valdena Gelato Shop in northern Italy. No geographic column exists in the table."
+      },
+      "ownership": {
+       "owner": "Retail Operations",
+       "publisher": null,
+       "steward": "Marco Bianchi"
+      },
+      "licence": {
+       "name": "internal",
+       "agreement_status": null,
+       "attribution_text": null,
+       "commercial_use": "not_applicable",
+       "evidence": "catalog entry internal.sales.daily_by_product: classification 'confidential', no licence field; no separate licence document read",
+       "mixed_sources": false,
+       "url": null
+      },
+      "access": {
+       "method": "warehouse_sql",
+       "auth_required": true,
+       "reachable": null,
+       "classification": "confidential",
+       "request_process": "Request to Retail Operations",
+       "approx_size_bytes": null
+      },
+      "declared_metadata": {
+       "contains_pii": false,
+       "status": "active",
+       "grain": "daily",
+       "row_count_approx": 310000,
+       "refresh_cadence": "daily",
+       "last_refreshed": "2026-10-14",
+       "classification": "confidential"
+      },
+      "documentation_excerpts": [
+       "Description: 'Units sold and revenue per product per day, from the till system.'",
+       "till_migration_2024 (last edited 2024-03-12): 'No sales were recorded in that period. Treat those days as missing, not as zero sales.' and 'sales.daily_by_product has no rows for those days.'",
+       "product_codes_2024 (last edited 2024-04-02): 'From 2024-04-01, product codes changed. Codes ending in \"L\" were replaced by new codes.' 'No mapping table exists between the old and new codes.' 'Old and new codes can only be matched by product name, and some names are not unique.' '`sales.products` lists only the current codes.'"
+      ],
+      "quality_notes": [
+       "Gap: wiki till_migration_2024 (last edited 2024-03-12) says no sales 2024-02-05 to 2024-03-10 and no rows exist for those days; treat as missing, not zero. This falls inside the 'history' window (2023-06-01 to 2025-05-31).",
+       "Product codes: wiki product_codes_2024 (last edited 2024-04-02) says codes changed from 2024-04-01, codes ending in 'L' were replaced, no mapping table exists, and names are not always unique. N2 (mapping) is therefore NOT satisfied by any source found so far.",
+       "Catalog vs wiki: catalog temporal_coverage starts 2022-01-01 and shows no gap; wiki documents a 2024-02-05 to 2024-03-10 gap with no rows. Catalog does not mention either gap. Both sides recorded; treat the wiki as the more specific source.",
+       "Catalog freshness: last_refreshed 2026-10-14 and refresh_cadence daily, but the wiki pages date from 2024 and no wiki page covers 2025-2026 data quality, so the recent window (2025-06-01 to 2026-03-31) has no documented gaps either way.",
+       "Not documented in any source read: refund/void treatment, timezone and day cut-off, whether the export for the recent period is complete or partial, and whether closed days produce no row or a zero row.",
+       "Closed days: the table has no closed-day flag (catalog columns are only sale_date, product_code, units_sold, revenue_eur). The candidate states closed days can be found only via store.calendar; that table was not profiled here.",
+       "Sample not possible: internal source accessed via warehouse_sql with request to Retail Operations; no sample was read, so no value-level checks (negatives, zeros, sentinels) were performed."
+      ],
+      "provenance": [
+       {
+        "claim": "Catalog: owner Retail Operations, steward Marco Bianchi, status active, classification confidential, contains_pii false",
+        "evidence": "get_catalog_entry internal.sales.daily_by_product"
+       },
+       {
+        "claim": "Catalog: grain daily, temporal coverage 2022-01-01 to open end, refresh daily, last refreshed 2026-10-14, ~310,000 rows",
+        "evidence": "get_catalog_entry internal.sales.daily_by_product"
+       },
+       {
+        "claim": "Catalog columns: sale_date, product_code, units_sold, revenue_eur",
+        "evidence": "get_catalog_entry internal.sales.daily_by_product"
+       },
+       {
+        "claim": "Till system replaced 2024-02-05 to 2024-03-10; no sales recorded; rows absent; treat as missing",
+        "evidence": "read_wiki_page till_migration_2024 (last edited 2024-03-12)"
+       },
+       {
+        "claim": "Product codes changed from 2024-04-01; codes ending in L replaced; no mapping table; sales.products has only current codes",
+        "evidence": "read_wiki_page product_codes_2024 (last edited 2024-04-02)"
+       },
+       {
+        "claim": "Access via warehouse_sql, request to Retail Operations",
+        "evidence": "get_catalog_entry internal.sales.daily_by_product access field"
+       }
+      ],
+      "unknowns": [
+       "Whether the warehouse connection is currently reachable (not tested; access requires a request to Retail Operations).",
+       "Row counts, value ranges and sentinel/negative values for units_sold and revenue_eur (no sample read).",
+       "Refund/void treatment, timezone and day cut-off, and completeness of the recent export (2025-06 to 2026-03).",
+       "Whether closed days produce no row or zero rows; store.calendar was not profiled.",
+       "Whether any mapping between old and new product codes exists outside the wiki (sales.products holds current codes only).",
+       "Single-store vs multi-store scope and the store's exact location (no store column in the catalog).",
+       "Whether there are gaps in the table other than 2024-02-05 to 2024-03-10 (no wiki page covers them).",
+       "Data-sharing terms and consent for internal use beyond the stated classification (no licence document)."
+      ],
+      "status": "active",
+      "location": "azure://valdena-gelato/sales/daily_by_product"
+     },
+     "name": "submit_catalog_record",
+     "type": "tool_use"
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "tool_result",
+     "tool_use_id": "toolu_bdrk_01T7LzEn5xns5C3yEwaG8oLM",
+     "content": "accepted"
+    }
+   ]
+  }
+ ]
+}

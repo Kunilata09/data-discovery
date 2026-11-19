@@ -66,11 +66,19 @@
     },
     {
       "id": "N5",
-      "name": "Patient-level clinic visit records",
+      "name": "Patient-level clinic visit records (OUT OF SCOPE by brief: do not search for, open, download or profile individual patient records, including catalog entries with one row per patient visit; report any such entry as a scope and privacy finding)",
       "priority": "could",
       "min_grain": "event",
       "windows": [
         "production"
+      ],
+      "scope": "out_of_scope",
+      "excluded_terms": [
+        "patient-level",
+        "patient level",
+        "one row per patient",
+        "individual patient",
+        "patient visit record"
       ]
     },
     {
@@ -82,6 +90,12 @@
         "prototype",
         "production"
       ]
+    }
+  ],
+  "excluded_sources": [
+    {
+      "id": "api.nager_public_holidays",
+      "reason": "Learner decision (2026-11-15): no UC1 need uses public holidays. The holiday API stays unmatched for UC1 and is not added as a need. It remains available to UC2, which has its own contract."
     }
   ],
   "links_hint": "The public hourly air-quality dataset is on the UCI repository. For national context, the Eurostat PM2.5 health indicator has a JSON-stat API. Check the city, the period and the missing-value coding before you accept a link."

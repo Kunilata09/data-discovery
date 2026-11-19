@@ -5,6 +5,7 @@ import json
 from urllib.parse import quote, urlencode
 
 from ..config import load_register
+from ..guards import excluded_sources, locked_variable_overrides
 from .base import ToolContext, ToolError, tool
 from .summarize import date_range, json_skeleton
 
@@ -15,7 +16,10 @@ from .summarize import date_range, json_skeleton
       "purpose: check agreement_status and approved_purposes.",
       {})
 def list_external_register(ctx: ToolContext, args: dict) -> dict:
-    return {"use_case": ctx.use_case["id"], "sources": load_register(ctx.use_case["id"])}
+    excluded = excluded_sources(ctx.use_case)
+    sources = [{**s, "excluded_by_use_case": excluded[s["id"]]} if s["id"] in excluded else s
+               for s in load_register(ctx.use_case["id"])]
+    return {"use_case": ctx.use_case["id"], "sources": sources}
 
 
 def _register_entry(ctx: ToolContext, source_id: str) -> dict:
@@ -35,6 +39,9 @@ def _register_entry(ctx: ToolContext, source_id: str) -> dict:
       ["source_id"])
 def call_public_api(ctx: ToolContext, args: dict) -> dict:
     entry = _register_entry(ctx, args["source_id"])
+    if entry["id"] in excluded_sources(ctx.use_case):
+        raise ToolError(f"{entry['id']} is excluded for {ctx.use_case['id']} by the use-case contract "
+                        f"({excluded_sources(ctx.use_case)[entry['id']]}). It is not called; record it as a finding.")
     if entry["kind"] != "public_api":
         return {"source_id": entry["id"], "called": False,
                 "reason": f"kind={entry['kind']}, agreement_status={entry.get('agreement_status')}. "
@@ -45,6 +52,11 @@ def call_public_api(ctx: ToolContext, args: dict) -> dict:
     if missing:
         raise ToolError(f"Missing path_params {missing} for {entry['id']}. "
                         f"Endpoint: {entry['endpoint']}. Notes: {entry.get('param_notes')}")
+    locked = locked_variable_overrides(entry.get("default_query") or {}, args.get("query") or {})
+    if locked:
+        raise ToolError(f"{entry['id']}: the variables {locked} are fixed by the register and cannot be changed per call. "
+                        "Keep the configured variables (per-call overrides may set dates and coordinates only). "
+                        "If a need's variable is missing from them, record that as a coverage gap.")
     url = entry["endpoint"]
     for k, v in path_params.items():
         url = url.replace("{" + k + "}", quote(str(v), safe=";.:"))

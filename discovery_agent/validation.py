@@ -61,8 +61,21 @@ def validate_use_case(use_case_id: str) -> list[str]:
             errs.append(f"{n.get('id')}: min_grain {n.get('min_grain')!r} not in {sorted(GRAINS)}")
         if not n.get("windows") or set(n["windows"]) - win_ids:
             errs.append(f"{n.get('id')}: windows must be a non-empty subset of {sorted(win_ids)}")
+        if n.get("scope") not in (None, "in_scope", "out_of_scope"):
+            errs.append(f"{n.get('id')}: scope must be 'in_scope' or 'out_of_scope'")
+        if n.get("scope") == "out_of_scope":
+            terms = n.get("excluded_terms")
+            if not (isinstance(terms, list) and terms and all(isinstance(t, str) and t.strip() for t in terms)):
+                errs.append(f"{n.get('id')}: an out_of_scope need needs excluded_terms (phrases that must not be searched "
+                            "for or matched in catalog entries)")
     if not any(n.get("priority") == "must" for n in uc["needs"]):
         errs.append("at least one need must have priority 'must'")
+    register_ids = {s["id"] for s in load_register(uc.get("id"))}
+    for ex in uc.get("excluded_sources") or []:
+        if ex.get("id") not in register_ids:
+            errs.append(f"excluded_sources: {ex.get('id')!r} is not in the external register tagged {uc.get('id')!r}")
+        if not (isinstance(ex.get("reason"), str) and ex["reason"].strip()):
+            errs.append(f"excluded_sources: {ex.get('id')!r} needs a reason")
     if not (ROOT / uc["brief_file"]).exists():
         errs.append(f"brief_file {uc['brief_file']} not found")
     base = ROOT / uc["internal_dir"]

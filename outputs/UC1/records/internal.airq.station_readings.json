@@ -1,0 +1,136 @@
+{
+  "source_id": "internal.airq.station_readings",
+  "kind": "internal",
+  "title": "City station readings (hourly): NO2 and PM2.5 from city monitoring stations",
+  "summary": "Hourly NO2 (ug/m3) and PM2.5 (ug/m3) concentrations from the city's own monitoring stations, keyed by station_id and UTC hour start. The catalog gives about 4.2 million rows, temporal coverage from 2023-01-01 with no end date, and an hourly refresh (last refreshed 2026-10-14). It has no coordinates, so station-to-traffic and station-to-weather matching is not yet possible. Access is by warehouse request to the Environment Monitoring Unit; no data was sampled or delivered.",
+  "schema": {
+    "documented": "structured",
+    "field_count": 4,
+    "fields": [
+      {
+        "name": "station_id",
+        "type": "string",
+        "description": "Monitoring station code",
+        "pii": false,
+        "unit": null
+      },
+      {
+        "name": "ts_utc",
+        "type": "timestamp",
+        "description": "Hour start, UTC",
+        "pii": false,
+        "unit": "UTC hour start"
+      },
+      {
+        "name": "no2_ugm3",
+        "type": "numeric",
+        "description": "NO2 concentration, micrograms per cubic metre",
+        "pii": false,
+        "unit": "ug/m3"
+      },
+      {
+        "name": "pm25_ugm3",
+        "type": "numeric",
+        "description": "PM2.5 concentration, micrograms per cubic metre",
+        "pii": false,
+        "unit": "ug/m3"
+      }
+    ],
+    "notes": "Catalog columns only. No station coordinates, station name/status, or data-validity flag documented."
+  },
+  "temporal": {
+    "start": "2023-01-01",
+    "end": null,
+    "grain": "hourly",
+    "metadata_last_updated": "2026-10-14",
+    "open_ended": true,
+    "refresh_cadence": "hourly"
+  },
+  "spatial": {
+    "coverage": [
+      "IT"
+    ],
+    "code_system": "free-text station codes (e.g. VR-03); no coordinates or ISO codes",
+    "notes": "City of Valdena (fictional, northern Italy) station network. Station codes are not joinable to geography in the catalog entry."
+  },
+  "ownership": {
+    "owner": "Environment Monitoring Unit",
+    "publisher": null,
+    "steward": "Named steward listed in catalog entry (not recorded here)"
+  },
+  "licence": {
+    "name": "internal",
+    "agreement_status": null,
+    "attribution_text": null,
+    "commercial_use": "not_applicable",
+    "evidence": "get_catalog_entry internal.airq.station_readings: classification 'internal'; no separate licence or sharing terms found in catalog or wiki station_network",
+    "mixed_sources": false,
+    "url": null
+  },
+  "access": {
+    "method": "warehouse_sql",
+    "auth_required": true,
+    "reachable": null,
+    "classification": "internal",
+    "approx_size_bytes": null,
+    "request_process": "Request to the Environment Monitoring Unit (catalog access.request_process); not yet delivered per candidate brief"
+  },
+  "declared_metadata": {
+    "status": "active",
+    "contains_pii": false,
+    "classification": "internal",
+    "grain": "hourly",
+    "refresh_cadence": "hourly",
+    "row_count_approx": 4200000,
+    "last_refreshed": "2026-10-14",
+    "catalog_exported_at": "2026-10-14T06:00:00Z"
+  },
+  "documentation_excerpts": [
+    "Hourly NO2 and PM2.5 readings from the city's own monitoring stations. (catalog description)",
+    "Hour start, UTC (ts_utc column description)",
+    "Station VR-03 (Via Roma) was switched off on 2024-06-30. Its readings stop there. (wiki station_network, last edited 2024-07-01)",
+    "airq.station_readings still lists the network as active. Station VR-03 has no readings after 2024-06-30. (wiki station_network)",
+    "The other stations report continuously from 2023-01-01. (wiki station_network)"
+  ],
+  "quality_notes": [
+    "Catalog vs wiki disagreement on station status: wiki station_network (last edited 2024-07-01) says VR-03 was switched off 2024-06-30 and has no readings after that; the catalog entry (exported 2026-10-14) still says status 'active' with no station-status note and an open-ended temporal_coverage end (null).",
+    "Catalog refresh metadata (last_refreshed 2026-10-14, hourly cadence) is more recent than the wiki (2024-07-01), so the catalog's open-ended coverage cannot be read as proof that every station reports to the present.",
+    "No station coordinates, so station-to-traffic and station-to-weather matching cannot be verified from the catalog.",
+    "Timestamps are UTC (ts_utc); the candidate notes that traffic counts are local time, so the join needs an explicit time-zone conversion (not checked against data).",
+    "Coverage starts 2023-01-01 per catalog and wiki: no data for the 2004-2005 prototype window, so the N1 prototype need is not met by this source.",
+    "No data-quality flags, missing-value convention, or validation status documented in the catalog; behaviour of missing hours is unknown.",
+    "No sample was read: access is via a warehouse request, not yet granted, so value ranges, negative values and gap patterns are unverified."
+  ],
+  "provenance": [
+    {
+      "claim": "Source is internal, owned by Environment Monitoring Unit, classified internal with no PII, hourly grain, ~4.2M rows, hourly refresh",
+      "evidence": "get_catalog_entry internal.airq.station_readings"
+    },
+    {
+      "claim": "Temporal coverage starts 2023-01-01 with open end; last refreshed 2026-10-14",
+      "evidence": "get_catalog_entry internal.airq.station_readings (temporal_coverage, last_refreshed)"
+    },
+    {
+      "claim": "Columns are station_id, ts_utc, no2_ugm3, pm25_ugm3; no coordinates field",
+      "evidence": "get_catalog_entry internal.airq.station_readings (columns)"
+    },
+    {
+      "claim": "VR-03 switched off 2024-06-30; catalog still lists network as active; other stations report from 2023-01-01",
+      "evidence": "read_wiki_page station_network (last_edited 2024-07-01)"
+    },
+    {
+      "claim": "Access via warehouse_sql request to the Environment Monitoring Unit",
+      "evidence": "get_catalog_entry internal.airq.station_readings (access)"
+    }
+  ],
+  "unknowns": [
+    "Whether the warehouse request has been granted and the table is reachable (not tested)",
+    "Station coordinates, station types and which stations exist beyond VR-03 (not documented)",
+    "Actual value ranges, negative or zero readings, missing-hour patterns and validation status (no sample read)",
+    "Whether other stations are still reporting at the 2026-10-14 refresh (catalog says open-ended; wiki covers only to 2024-07-01)",
+    "Time-zone handling of ts_utc relative to local traffic data",
+    "Any licence, sharing or consent terms beyond internal classification for use in the warning model",
+    "Exact size in bytes (row count is approximate only)",
+    "Whether a 2004-2005 prototype substitute is needed from another source (catalog coverage starts 2023)"
+  ]
+}

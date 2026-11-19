@@ -8,6 +8,7 @@ import pytest
 
 from discovery_agent.agent import AgentFailed, run_agent, validate
 from discovery_agent.agents import REQUIRED_MEMO_HEADINGS, planner_spec, risk_spec
+from discovery_agent.config import load_register
 from discovery_agent.orchestrator import Pipeline, RunOptions
 from discovery_agent.tools import ToolContext
 from discovery_agent.trace import Trace
@@ -47,10 +48,16 @@ class FakeLLM:
         return step(messages) if callable(step) else step
 
 
+def vendor_ids(uc):
+    return [s["id"] for s in load_register(uc["id"]) if s["kind"] == "vendor_feed"]
+
+
 def plan_payload(uc):
+    # Every vendor feed tagged for the use case must be mapped to a need (G7); the first need carries them.
     return {"use_case": uc["id"], "objective_summary": "Find data to explain poor-air days and warn clinic patients in time.",
             "need_plans": [{"need_id": n["id"], "interpretation": n["name"], "internal_queries": [n["name"]],
-                            "external_data_hints": [], "register_ids": [], "acceptance_criteria": ["covers window"]} for n in uc["needs"]],
+                            "external_data_hints": [], "register_ids": vendor_ids(uc) if i == 0 else [],
+                            "acceptance_criteria": ["covers window"]} for i, n in enumerate(uc["needs"])],
             "open_questions": []}
 
 
@@ -138,11 +145,12 @@ def test_risk_validator_blocks_silently_dropped_rule_flags(uc1, settings):
 
 
 def test_full_pipeline_with_fake_llm(uc1, tmp_path):
-    cands = [{"source_id": "internal.clinic.patient_visits", "kind": "internal", "title": "Clinic visits",
-              "need_ids": ["N5"], "target_windows": ["production"], "why_relevant": "patient level visits", "found_via": "search"},
+    # G7: patient-level records are out of scope and cannot be a candidate, so the PII path runs on in-scope daily counts.
+    cands = [{"source_id": "internal.clinic.resp_visits_daily", "kind": "internal", "title": "Respiratory visits, daily",
+              "need_ids": ["N4"], "target_windows": ["production"], "why_relevant": "daily counts by district", "found_via": "search"},
              {"source_id": "api.open_meteo_archive", "kind": "public_api", "title": "Weather",
               "need_ids": ["N3"], "target_windows": ["prototype", "production"], "why_relevant": "temperature", "found_via": "register"}]
-    billing_rec = record("internal.clinic.patient_visits", "internal",
+    billing_rec = record("internal.clinic.resp_visits_daily", "internal",
                          schema={"documented": "structured", "fields": [{"name": "postcode", "pii": True}]})
     nager_rec = record("api.open_meteo_archive", "public_api",
                        temporal={"start": "1940-01-01", "end": None, "grain": "hourly"},
@@ -154,7 +162,14 @@ def test_full_pipeline_with_fake_llm(uc1, tmp_path):
                       access={"method": "file_download", "auth_required": False, "reachable": True})
     llm = FakeLLM({
         "planner": [reply(tool_use("submit_search_plan", plan_payload(uc1)))],
-        "scout": [reply(tool_use("submit_candidates", {"candidates": cands, "searches_run": ["x"], "unmet_needs": []}))],
+        "scout": [reply(tool_use("submit_candidates", {"candidates": cands, "searches_run": ["x"],
+                                                       # Every required need-window with no candidate is listed (G7 completeness).
+                                                       "unmet_needs": ["N1 prototype: no source", "N1 production: no source",
+                                                                       "N2 production: no traffic source",
+                                                                       "N5 production: out of scope by the brief",
+                                                                       "N6 prototype: no source", "N6 production: no source"],
+                                                       "rejected_without_profiling": [{"source_id": v, "reason": "agreement expired"}
+                                                                                      for v in vendor_ids(uc1)]}))],
         "profiler__internal": [reply(tool_use("submit_catalog_record", billing_rec))],
         "profiler__api": [reply(tool_use("submit_catalog_record", nager_rec))],
         "profiler__link": [reply(tool_use("submit_catalog_record", link_rec))],
@@ -173,7 +188,7 @@ def test_full_pipeline_with_fake_llm(uc1, tmp_path):
     assert results["dataset_links"][0]["canonical_ref"] == "uci:360"
     linked = next(s for s in results["sources"] if s["source_id"] == "link.uci_360")
     assert linked["kind"] == "dataset_link" and linked["location"].endswith("air+quality")
-    billing = next(s for s in results["sources"] if s["source_id"] == "internal.clinic.patient_visits")
+    billing = next(s for s in results["sources"] if s["source_id"] == "internal.clinic.resp_visits_daily")
     assert "GOV-PII" in billing["red_flags"]
     memo = (out / "feasibility_memo.md").read_text()
     assert "## Human review gate" in memo and "Who owns the clinic extract?" in memo

@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import json
 import re
-
-from .base import NotImplementedTool
+from html import unescape
 
 
 def jsonld_datasets(html: str) -> list[dict]:
@@ -71,5 +70,124 @@ def summarise_jsonld_dataset(d: dict) -> dict:
 # creativecommons.org / opendatacommons.org / nationalarchives.gov.uk (OGL) / choosealicense.com;
 # then sentences such as "licensed under a Creative Commons Attribution 4.0 International (CC BY 4.0) license".
 # jsonld defaults to jsonld_datasets(html) when None. Never guess: return None values when unsure.
+# Closed table of Creative Commons suffixes. Anything outside it is unrecognised, never guessed.
+_CC_NAMES = {
+    "": "CC BY", "-sa": "CC BY-SA", "-nc": "CC BY-NC", "-nd": "CC BY-ND",
+    "-nc-sa": "CC BY-NC-SA", "-nc-nd": "CC BY-NC-ND",
+}
+# The suffix group is greedy, so "BY-NC-SA" is read whole and can never be cut down to "BY" or "BY-NC".
+# Plain "Attribution" wording is never used as evidence of a licence.
+_CC_URL_RE = re.compile(r"creativecommons\.org/licenses/by((?:-(?:nc|sa|nd))*)/(\d\.\d)", re.I)
+_CC_NAME_RE = re.compile(r"\bCC\s*BY((?:-(?:NC|SA|ND))*)\s*(\d\.\d)\b", re.I)
+_CC0_RE = re.compile(r"\bCC0\s*1\.0\b", re.I)
+_ODBL_RE = re.compile(r"\bODbL\s*1\.0\b", re.I)
+_OGL_RE = re.compile(r"\bOpen Government Licen[cs]e\s*v?3\.0\b", re.I)
+_UNKNOWN_WORDS = {"unknown", "unspecified", "not specified", "none", "n/a"}
+
+
+def _cc(suffix: str, version: str) -> str | None:
+    name = _CC_NAMES.get(suffix.lower())
+    return f"{name} {version}" if name else None
+
+
+def _canonical_url(url: str) -> str | None:
+    m = _CC_URL_RE.search(url)
+    if m:
+        return _cc(m.group(1), m.group(2))
+    if re.search(r"creativecommons\.org/publicdomain/zero/1\.0|choosealicense\.com/licenses/cc0-1\.0", url, re.I):
+        return "CC0 1.0"
+    if re.search(r"opendatacommons\.org/licenses/odbl/1\.0", url, re.I):
+        return "ODbL 1.0"
+    if re.search(r"nationalarchives\.gov\.uk/doc/open-government-licence/version/3", url, re.I):
+        return "OGL v3.0"
+    return None
+
+
+def _canonical_name(name: str) -> str | None:
+    m = _CC_NAME_RE.search(name)
+    if m:
+        return _cc(m.group(1), m.group(2))
+    if _CC0_RE.search(name):
+        return "CC0 1.0"
+    if _ODBL_RE.search(name):
+        return "ODbL 1.0"
+    if _OGL_RE.search(name):
+        return "OGL v3.0"
+    return None
+
+
+def _result(name, url, snippet, found_in) -> dict:
+    return {"licence_name": name, "licence_url": url or None,
+            "snippet": snippet[:400] if snippet else None, "found_in": found_in}
+
+
+def _from_jsonld(datasets: list[dict]) -> dict | None:
+    """The first Dataset that has a 'license' key decides. Returns None to fall through to links and text."""
+    for d in datasets:
+        if "license" not in d:
+            continue
+        value = d["license"]
+        if isinstance(value, list):
+            value = value[0] if value else None
+        if isinstance(value, str):
+            text = value.strip()
+            name, url = (None, text) if text.startswith("http") else (text or None, None)
+        elif isinstance(value, dict):
+            name = str(value.get("name") or "").strip() or None
+            url = str(value.get("url") or "").strip() or None
+        else:
+            return None
+        if not name and not url:
+            return None
+        snippet = json.dumps(value, ensure_ascii=False)
+        from_url = _canonical_url(url) if url else None
+        if from_url:  # the URL is authoritative when it names a known licence
+            return _result(from_url, url, snippet, "json-ld")
+        if name and name.lower().strip(" .") in _UNKNOWN_WORDS:  # explicit "Unknown" is a final answer
+            return _result(None, url, snippet, "json-ld")
+        from_name = _canonical_name(name) if name else None
+        if from_name:
+            return _result(from_name, url, snippet, "json-ld")
+        return None  # unrecognised: fall through to links and text
+    return None
+
+
+def _from_links(html: str) -> dict | None:
+    for m in re.finditer(r"(?is)<a\b[^>]*?\bhref\s*=\s*[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", html):
+        href = unescape(m.group(1)).strip()
+        name = _canonical_url(href)
+        if name:
+            text = " ".join(unescape(re.sub(r"<[^>]+>", " ", m.group(2))).split())
+            return _result(name, href, text or href, "link")
+    return None
+
+
+def _from_text(html: str) -> dict | None:
+    body = re.sub(r"(?is)<(script|style)\b.*?</\1\s*>", " ", html)
+    text = " ".join(unescape(re.sub(r"<[^>]+>", " ", body)).split())
+    resolvers = (
+        (_CC_NAME_RE, lambda m: _cc(m.group(1), m.group(2))),
+        (_CC0_RE, lambda m: "CC0 1.0"),
+        (_ODBL_RE, lambda m: "ODbL 1.0"),
+        (_OGL_RE, lambda m: "OGL v3.0"),
+    )
+    for rx, resolve in resolvers:
+        m = rx.search(text)
+        name = resolve(m) if m else None
+        if name:
+            window = text[max(0, m.start() - 150): m.end() + 150]
+            return _result(name, None, window, "text")
+    return None
+
+
 def extract_licence(html: str, jsonld: list[dict] | None = None) -> dict:
-    raise NotImplementedTool("extract_licence is a learner TODO (G1). See discovery_agent/tools/licence.py.")
+    """Licence of a dataset landing page. Order: JSON-LD, then licence links, then text.
+
+    jsonld=None reads the page's own JSON-LD; jsonld=[] means "no JSON-LD". Unknown or unrecognised
+    values are never turned into a licence name."""
+    datasets = jsonld_datasets(html) if jsonld is None else jsonld
+    for step in (lambda: _from_jsonld(datasets), lambda: _from_links(html), lambda: _from_text(html)):
+        found = step()
+        if found is not None:
+            return found
+    return _result(None, None, None, None)
