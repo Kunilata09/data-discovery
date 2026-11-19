@@ -1,0 +1,4 @@
+Discovery run UC1 | model=claude-haiku-5-5 | stages profile..profile | out=/tmp/tc018_project/C
+[profile]
+  totals: {'llm_calls': 0, 'input_tokens': 0, 'output_tokens': 0, 'cache_read_input_tokens': 0, 'tool_calls': 0, 'tool_errors': 0, 'http_requests': 0, 'http_refused': 0}
+Reason for https://archive.ics.uci.edu/dataset/360/air+quality is too short: give at least 20 characters, in your own words.

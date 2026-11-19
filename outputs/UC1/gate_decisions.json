@@ -1,0 +1,19 @@
+{
+  "decisions": [
+    {
+      "url": "https://archive.ics.uci.edu/dataset/360/air+quality",
+      "decision": "accept",
+      "reason": "I accept this dataset because it provides hourly NO2 measurements for an Italian city, making it relevant to the UC1 air-quality prototype. Its single-site coverage and missing-value limitations will be evaluated during profiling."
+    },
+    {
+      "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sdg_11_52?format=JSON&lang=EN&geo=IT",
+      "decision": "accept",
+      "reason": "Accept for N6 prototype only: it must not be mapped to production because its data ends in 2023."
+    },
+    {
+      "url": "https://catalog.data.gov/dataset/open-air-chicago-hour-aggregations",
+      "decision": "accept",
+      "reason": "Accept as an intentional distractor. It is not suitable for the Italian study area, and its domain must remain outside the allowlist so the pipeline records the refusal."
+    }
+  ]
+}

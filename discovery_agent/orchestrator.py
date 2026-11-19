@@ -95,7 +95,7 @@ class Pipeline:
         plan = _read(self.out / "search_plan.json", "plan")
         task = (f"{self._brief_block()}\n\n<search_plan>\n{json.dumps(plan, indent=1)}\n</search_plan>\n\n"
                 f"Execute the plan and submit at most {self.settings['agents']['max_candidates']} candidates with submit_candidates.")
-        cands = self._agent(scout_spec(self.uc, self.settings), task, "scout")
+        cands = self._agent(scout_spec(self.uc, self.settings, plan), task, "scout")
         _write(self.out / "candidates.json", cands)
         self._ran_scout = True
         return cands

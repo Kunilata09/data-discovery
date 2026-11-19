@@ -31,6 +31,27 @@ def _d(value: str | None) -> date | None:
         return None
 
 
+def _overlap_days(a0: date, a1: date, b0: date, b1: date) -> int:
+    """Inclusive number of days shared by [a0, a1] and [b0, b1]; 0 if they do not overlap."""
+    lo, hi = max(a0, b0), min(a1, b1)
+    return (hi - lo).days + 1 if hi >= lo else 0
+
+
+def _years_before(d: date, years: int) -> date:
+    try:
+        return d.replace(year=d.year - years)
+    except ValueError:  # 29 February in a non-leap target year
+        return d.replace(year=d.year - years, day=28)
+
+
+_NEGATED_MISSING_RE = re.compile(r"(?i)\b(?:no|not|without|free of|nor|zero)\b[^.;:]{0,40}?\b(?:missing|NaN)\b")
+_MISSING_RE = re.compile(r"(?i)\bmissing\b|absence of (?:a )?value|(?<![\d.])-200(?![\d.])|\bNaN\b|[\"'`]\?[\"'`]")
+
+
+def _declares_no(value) -> bool:
+    return value is False or (isinstance(value, str) and value.strip().lower() in {"no", "false"})
+
+
 # ---------------------------------------------------------------------------
 # Provided rules (read these as worked examples)
 # ---------------------------------------------------------------------------
@@ -116,14 +137,65 @@ def rule_temporal_coverage(record: dict, candidate: dict, uc: dict, settings: di
       years before uc["as_of"].
     Evidence strings must name the window(s) and the dates you compared.
     """
-    raise NotImplementedError("rule_temporal_coverage is a learner TODO (G4)")
+    temporal = record.get("temporal") or {}
+    if (temporal.get("grain") or "").lower() == "static":
+        return []
+    start = _d(temporal.get("start"))
+    if start is None:
+        return []
+    as_of = _d(uc["as_of"])
+    end_raw = _d(temporal.get("end"))
+    end = end_raw or as_of  # a null end means "still updating": covered up to the as-of date
+    open_label = "open (still updating)" if end_raw is None else str(end_raw)
+
+    windows = {w["id"]: w for w in uc.get("windows", [])}
+    fractions = {}  # window id -> (fraction covered, window start, window end, covered days)
+    for wid in candidate.get("target_windows") or []:
+        w = windows.get(wid)
+        if w is None:
+            continue
+        w_start, w_end = _d(w["start"]), _d(w["end"])
+        length = (w_end - w_start).days + 1
+        covered = _overlap_days(start, end, w_start, w_end)
+        fractions[wid] = (covered / length, w_start, w_end)
+    if not fractions:
+        return []
+
+    flags = []
+    threshold = settings["rules"]["partial_window_threshold"]
+    ids = ", ".join(sorted(fractions))
+    if all(frac == 0 for frac, _, _ in fractions.values()):
+        flags.append(_flag("COV-OUT-OF-WINDOW",
+                           f"record {start} to {open_label} does not overlap target window(s) {ids}"))
+    else:
+        short = [f"{wid} ({frac:.0%} of {w0} to {w1})" for wid, (frac, w0, w1) in sorted(fractions.items())
+                 if frac < threshold]
+        if short:
+            flags.append(_flag("COV-PARTIAL-WINDOW",
+                               f"record {start} to {open_label} covers less than {threshold:.0%} of: " + "; ".join(short)))
+    if end_raw is not None and end_raw < _years_before(as_of, settings["rules"]["stale_after_years"]):
+        flags.append(_flag("FRS-STALE",
+                           f"data ends {end_raw}, more than {settings['rules']['stale_after_years']} years "
+                           f"before as-of {as_of} (window(s) {ids})"))
+    return flags
 
 
 def rule_grain(record: dict, candidate: dict, uc: dict, settings: dict) -> list[Flag]:
     """COV-GRAIN-MISMATCH if the record's grain is coarser than min_grain of any need the
     candidate serves (candidate["need_ids"] -> uc["needs"]). Only grains in GRAIN_ORDER are
     comparable; "event", "static" and "unknown" on either side never raise the flag."""
-    raise NotImplementedError("rule_grain is a learner TODO (G4)")
+    grain = ((record.get("temporal") or {}).get("grain") or "").lower()
+    if grain not in GRAIN_ORDER:
+        return []
+    needs = {n["id"]: n for n in uc.get("needs", [])}
+    too_coarse = []
+    for nid in candidate.get("need_ids") or []:
+        min_grain = (needs.get(nid) or {}).get("min_grain")
+        if min_grain in GRAIN_ORDER and GRAIN_ORDER.index(grain) > GRAIN_ORDER.index(min_grain):
+            too_coarse.append(f"{nid} needs {min_grain}")
+    if not too_coarse:
+        return []
+    return [_flag("COV-GRAIN-MISMATCH", f"source grain {grain!r} is coarser than: {', '.join(too_coarse)}")]
 
 
 def rule_metadata_contradiction(record: dict, candidate: dict, uc: dict, settings: dict) -> list[Flag]:
@@ -132,7 +204,20 @@ def rule_metadata_contradiction(record: dict, candidate: dict, uc: dict, setting
     values (e.g. "missing values", "absence of value", "-200", "?" used as missing, "NaN").
     Careful: "Data set has no missing values" is NOT a contradiction. Strip negated phrases
     before matching."""
-    raise NotImplementedError("rule_metadata_contradiction is a learner TODO (G4)")
+    declared = (record.get("declared_metadata") or {}).get("has_missing_values")
+    if not _declares_no(declared):
+        return []
+    sources = [("documentation_excerpts", record.get("documentation_excerpts") or []),
+               ("quality_notes", record.get("quality_notes") or [])]
+    for source, texts in sources:
+        for text in texts:
+            if not isinstance(text, str):
+                continue
+            # Negated phrases ("has no missing values") are removed before the search, so they never match.
+            if _MISSING_RE.search(_NEGATED_MISSING_RE.sub(" ", text)):
+                return [_flag("DQ-METADATA-CONTRADICTION",
+                              f"declared has_missing_values={declared!r}, but {source} says: {text.strip()[:200]!r}")]
+    return []
 
 
 RULES = [rule_licence, rule_agreement, rule_access, rule_payload, rule_pii, rule_owner, rule_status,

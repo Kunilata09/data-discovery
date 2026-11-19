@@ -6,9 +6,23 @@ against tests/fixtures/ without network or LLM.
 """
 from __future__ import annotations
 
+import math
+from collections import Counter
+
 from .base import NotImplementedTool, ToolContext, tool
 
 LARGE_RESOURCE_BYTES = 100_000_000
+
+# ISO 3166-1 alpha-2 codes. Any other geo code (Eurostat's UK and EL, EU27_2020, XK) is flagged.
+_ISO_3166_ALPHA2 = frozenset((
+    "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ "
+    "CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR "
+    "GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO "
+    "JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR "
+    "MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO "
+    "RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV "
+    "TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW"
+).split())
 
 
 # ---------------------------------------------------------------------------
@@ -56,8 +70,66 @@ def datapackage_summary(package: dict, field_filter: list[str] | None = None) ->
 # Hint: dimension categories look like
 #   dataset["dimension"]["geo"]["category"] = {"index": {"UK": 0, "FR": 1}, "label": {"UK": "United Kingdom", ...}}
 #   "index" can also be a list of codes.
+def _category_codes(category: dict) -> list[str]:
+    """Codes of one dimension in position order. JSON-stat 'index' is a dict (code -> position) or a list."""
+    index = category.get("index") or []
+    if isinstance(index, dict):
+        return [code for code, _ in sorted(index.items(), key=lambda kv: kv[1])]
+    return list(index)
+
+
 def jsonstat_summary(dataset: dict) -> dict:
-    raise NotImplementedTool("jsonstat_summary is a learner TODO (G3). See discovery_agent/tools/formats.py.")
+    ids = dataset.get("id") or []
+    sizes = dataset.get("size") or [0] * len(ids)
+    dimensions_raw = dataset.get("dimension") or {}
+
+    dimensions = []
+    codes_by_id: dict[str, list[str]] = {}
+    for dim_id, size in zip(ids, sizes):
+        category = (dimensions_raw.get(dim_id) or {}).get("category") or {}
+        codes = _category_codes(category)
+        labels = category.get("label") or {}
+        codes_by_id[dim_id] = codes
+        dimensions.append({
+            "id": dim_id, "size": size,
+            "labels": [f"{c}: {labels[c]}" if labels.get(c) else c for c in codes[:10]],
+        })
+
+    time_codes = sorted(codes_by_id.get("time", []))
+    time = {"first": time_codes[0], "last": time_codes[-1], "values": time_codes} if time_codes else None
+    geo_codes = codes_by_id.get("geo", [])
+
+    expected_cells = math.prod(sizes) if sizes else 0
+    raw_values = dataset.get("value")
+    if isinstance(raw_values, dict):
+        values = list(raw_values.values())  # sparse: a position missing from the dict is a missing cell
+    elif isinstance(raw_values, list):
+        values = raw_values
+    else:
+        values = []
+    value_count = sum(v is not None for v in values)
+    missing_cells = expected_cells - value_count
+
+    raw_status = dataset.get("status")
+    if isinstance(raw_status, dict):
+        statuses = list(raw_status.values())
+    elif isinstance(raw_status, list):
+        statuses = [s for s in raw_status if s is not None]
+    else:
+        statuses = []
+
+    warnings = []
+    if missing_cells > 0:
+        warnings.append("MISSING_CELLS")
+    if any(code not in _ISO_3166_ALPHA2 for code in geo_codes):
+        warnings.append("NON_ISO_GEO_CODES")
+
+    return {
+        "label": dataset.get("label"), "updated": dataset.get("updated"), "source": dataset.get("source"),
+        "dimensions": dimensions, "time": time, "geo_codes": geo_codes,
+        "expected_cells": expected_cells, "value_count": value_count, "missing_cells": missing_cells,
+        "status_counts": dict(Counter(statuses)), "warnings": warnings,
+    }
 
 
 # ---------------------------------------------------------------------------

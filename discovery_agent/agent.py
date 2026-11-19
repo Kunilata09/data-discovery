@@ -17,6 +17,21 @@ from .llm import LLMError, say
 from .tools import REGISTRY, ToolContext, execute
 
 Validator = Callable[[dict], list[str]]
+# A check that also sees the keys the agent's tool results actually contained (see collect_keys).
+EvidenceValidator = Callable[[dict, frozenset], list[str]]
+
+
+def collect_keys(payload: Any, into: set[str]) -> set[str]:
+    """Add every dict key found anywhere in a tool result to `into`. Used to ask whether a source
+    actually stated a field, rather than the agent inferring it from other numbers."""
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            into.add(str(key))
+            collect_keys(value, into)
+    elif isinstance(payload, list):
+        for item in payload:
+            collect_keys(item, into)
+    return into
 
 
 class AgentFailed(RuntimeError):
@@ -33,6 +48,7 @@ class AgentSpec:
     submit_schema: dict
     max_turns: int
     validators: list[Validator] = field(default_factory=list)
+    evidence_validators: list[EvidenceValidator] = field(default_factory=list)
 
 
 def _to_jsonable(block: Any) -> Any:
@@ -58,6 +74,7 @@ def run_agent(spec: AgentSpec, task: str, *, llm, ctx: ToolContext, settings: di
     tools.append({"name": spec.submit_name, "description": spec.submit_description, "input_schema": spec.submit_schema})
     messages: list[dict] = [{"role": "user", "content": task}]
     limit = settings["agents"]["tool_result_char_limit"]
+    seen_keys: set[str] = set()
     nudges = 0
     try:
         for turn in range(1, spec.max_turns + 1):
@@ -81,7 +98,7 @@ def run_agent(spec: AgentSpec, task: str, *, llm, ctx: ToolContext, settings: di
             results, submitted = [], None
             for tu in tool_uses:
                 if tu.name == spec.submit_name:
-                    errors = validate(tu.input, spec)
+                    errors = validate(tu.input, spec, frozenset(seen_keys))
                     ctx.trace.event("submit", agent=label, ok=not errors, errors=errors[:10])
                     if errors:
                         results.append({"type": "tool_result", "tool_use_id": tu.id, "is_error": True,
@@ -94,6 +111,8 @@ def run_agent(spec: AgentSpec, task: str, *, llm, ctx: ToolContext, settings: di
                                     "content": f"Tool {tu.name!r} is not available to the {spec.name} agent."})
                 else:
                     ok, payload = execute(tu.name, tu.input, ctx)
+                    if ok:
+                        collect_keys(payload, seen_keys)
                     results.append({"type": "tool_result", "tool_use_id": tu.id, "content": _clip(payload, limit),
                                     **({} if ok else {"is_error": True})})
             messages.append({"role": "user", "content": results})
@@ -113,11 +132,13 @@ def run_agent(spec: AgentSpec, task: str, *, llm, ctx: ToolContext, settings: di
                 indent=1, ensure_ascii=False, default=str), encoding="utf-8")
 
 
-def validate(payload: dict, spec: AgentSpec) -> list[str]:
+def validate(payload: dict, spec: AgentSpec, evidence: frozenset = frozenset()) -> list[str]:
     errors = [f"{'/'.join(map(str, e.absolute_path)) or '<root>'}: {e.message}"
               for e in jsonschema.Draft202012Validator(spec.submit_schema).iter_errors(payload)]
     if errors:
         return errors
     for check in spec.validators:
         errors.extend(check(payload))
+    for check in spec.evidence_validators:
+        errors.extend(check(payload, evidence))
     return errors

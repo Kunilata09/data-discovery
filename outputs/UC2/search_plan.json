@@ -1,0 +1,152 @@
+{
+  "use_case": "UC2",
+  "objective_summary": "Decide whether the shop has enough daily sales history (2023-06-01 to 2025-05-31, plus 2025-06-01 to 2026-03-31) to measure how daily maximum temperature and Italian public holidays move ice-cream sales, which product codes can be compared across the 2024 code change, and which red flags must be fixed before a one-week-ahead order forecast is built.",
+  "need_plans": [
+    {
+      "need_id": "N1",
+      "interpretation": "Daily ice-cream sales per product for the shop (one row per shop-day-product, with quantity and/or revenue), covering both windows at daily grain. Customer-level data is out of scope and must not be sought.",
+      "internal_queries": [
+        "daily ice cream sales by product",
+        "gelato sales daily export",
+        "POS sales line items Valdena",
+        "vendite gelato giornaliere per prodotto",
+        "sales fact table daily SKU quantity",
+        "till receipts aggregated by day and product"
+      ],
+      "external_data_hints": [],
+      "register_ids": [],
+      "acceptance_criteria": [
+        "Daily grain present for every day in 2023-06-01 to 2025-05-31 and 2025-06-01 to 2026-03-31, or gaps are listed explicitly",
+        "Product identifier, quantity and date present and parseable",
+        "Shop identifier present so only Valdena rows are used",
+        "Closed days are distinguishable from missing data (zero sales vs no record)",
+        "Extract date and source system recorded"
+      ],
+      "likely_pitfalls": [
+        "Renamed or migrated sales tables after the 2024 code change",
+        "Closed days absent from the export, mistaken for zero-sales days",
+        "Refunds or voids counted as negative sales",
+        "Timezone or cut-off differences between till day and calendar day",
+        "Partial days in the recent window if the export was taken mid-month"
+      ]
+    },
+    {
+      "need_id": "N2",
+      "interpretation": "A static crosswalk mapping old product codes (before the 2024 code change) to new codes, so the history window can be compared with the recent window at product level. Products with no one-to-one mapping must be flagged.",
+      "internal_queries": [
+        "product code change 2024 mapping",
+        "old SKU to new SKU crosswalk",
+        "codice prodotto cambio 2024",
+        "product master migration legacy codes",
+        "gelato product catalogue recode",
+        "wiki UC2 product code mapping"
+      ],
+      "external_data_hints": [],
+      "register_ids": [],
+      "acceptance_criteria": [
+        "Every product code present in the history window maps to a new code or is explicitly marked as retired",
+        "Mapping is one-to-one or many-to-one with the cardinality documented",
+        "Mapping effective date matches the 2024 change date stated in the source",
+        "Mapping owner or source documented"
+      ],
+      "likely_pitfalls": [
+        "Splits or merges of products at the code change, so one old code maps to several new ones",
+        "Same code reused for a different product after the change",
+        "Codes differing in leading zeros or whitespace so they do not join",
+        "Mapping held only in a wiki page that is out of date"
+      ]
+    },
+    {
+      "need_id": "N3",
+      "interpretation": "Daily maximum temperature at a single Italian location chosen by the team (assumption to be recorded in decisions.md), covering both windows at daily grain. Source is the Open-Meteo historical archive, which the register fixes to its approved variable lists.",
+      "internal_queries": [
+        "weather temperature shop location",
+        "daily max temperature Valdena",
+        "meteo temperatura massima",
+        "weather covariate sales model",
+        "wiki UC2 weather source coordinates"
+      ],
+      "external_data_hints": [
+        "Open-Meteo Historical Weather API (archive endpoint) at a single northern Italian coordinate justified by the team (e.g. a city where the shop plausibly sits); daily grain, 2023-06-01 to 2026-03-31; check that a daily maximum temperature variable is in the register-approved list, since the default query only lists hourly temperature_2m"
+      ],
+      "register_ids": [
+        "api.open_meteo_archive"
+      ],
+      "acceptance_criteria": [
+        "Daily maximum temperature available for every day in both windows with no gaps",
+        "Single coordinate pair recorded as an assumption in decisions.md",
+        "Units (degrees Celsius) and timezone recorded and consistent with sales dates",
+        "Probe calls kept to a few days per the register note",
+        "Terms of use checked: open-data and prototyping/production purposes approved"
+      ],
+      "likely_pitfalls": [
+        "Daily max not in the approved variable list; hourly temperature_2m would need aggregating and must be flagged as a coverage gap if not allowed",
+        "UTC versus local timezone shifting the day boundary",
+        "Reanalysis grid cell is coarser than the town, so the value is an approximation",
+        "Using a coordinate far from the shop without justification"
+      ]
+    },
+    {
+      "need_id": "N4",
+      "interpretation": "Calendar of Italian national public holidays at daily grain for 2023 to 2026, with a flag per date, to join to sales dates.",
+      "internal_queries": [
+        "public holidays Italy calendar",
+        "festivita italiane",
+        "holiday flag sales model",
+        "calendar table holidays IT"
+      ],
+      "external_data_hints": [
+        "Nager.Date public holidays API, country IT, years 2023 to 2026; check that regional or local patron-saint holidays are not silently included or excluded"
+      ],
+      "register_ids": [
+        "api.nager_public_holidays"
+      ],
+      "acceptance_criteria": [
+        "Every year covering 2023 to 2026 returns a list for country IT",
+        "Each holiday has a date and a name, and holiday type is recorded where given",
+        "Local/regional holidays are flagged separately or noted as not covered",
+        "Terms of use checked: open-data source approved for prototyping and production"
+      ],
+      "likely_pitfalls": [
+        "Regional holidays (for example local patron days) absent from a national list, which matters in northern Italy",
+        "Holidays falling on weekends, so the effect is confounded with weekday",
+        "Bridge days (ponte) not represented"
+      ]
+    },
+    {
+      "need_id": "N5",
+      "interpretation": "Shop opening and closing days (including closures, refurbishments and seasonal shutdowns) plus local events in the shop's town at daily grain, for both windows.",
+      "internal_queries": [
+        "shop opening hours calendar",
+        "closed days Valdena",
+        "chiusure negozio",
+        "local events calendar shop",
+        "promotions and events log",
+        "store operating days history"
+      ],
+      "external_data_hints": [
+        "If internal records are missing: municipal open-data portal of the chosen town for public events calendar, daily grain, 2023-06 to 2026-03; confirm licence on the source page, since no register source covers events"
+      ],
+      "register_ids": [],
+      "acceptance_criteria": [
+        "Opening/closing status available per day for both windows, or gaps listed",
+        "Closure reasons recorded where known",
+        "Any events source has a documented licence and covers both windows",
+        "Events linked to the chosen town only"
+      ],
+      "likely_pitfalls": [
+        "Opening hours changing over time without a history",
+        "Closed days already removed from the sales export, so they look like missing data rather than closures",
+        "Event lists that are not dated consistently or are only current, not historical"
+      ]
+    }
+  ],
+  "open_questions": [
+    "Which town or coordinate should represent the shop? No source names the city; the team must choose and record it in decisions.md.",
+    "Is a daily maximum temperature variable in the approved Open-Meteo list? The register lists only hourly temperature_2m as default; confirm whether daily aggregation is allowed or whether a coverage gap must be recorded.",
+    "Does the owner want regional or local holidays (for example patron-saint days) included, given that the Nager API covers national holidays?",
+    "Which product codes changed in 2024, and was the change a split, merge or renumbering? Is there an owner for the mapping?",
+    "Are closed days recorded anywhere, or only implied by missing sales rows?",
+    "Is the shop's sales export complete through 2026-03-31, or does the recent window stop earlier?"
+  ]
+}

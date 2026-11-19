@@ -12,6 +12,7 @@ from collections import Counter
 from functools import lru_cache
 from pathlib import Path
 
+from ..guards import excluded_match
 from .base import ToolContext, ToolError, tool
 
 _TOKEN = re.compile(r"[a-z0-9]+")
@@ -103,13 +104,24 @@ def _snippet(text: str, query: str, width: int = 220) -> str:
 def search_internal_catalog(ctx: ToolContext, args: dict) -> dict:
     est = estate(ctx)
     query = args["query"]
-    hits = []
+    out_need = excluded_match(query, ctx.use_case)
+    if out_need:  # the query asks for a need the brief excludes: it is not run, and that is the finding
+        return {"query": query, "hits": [], "refused": f"Not run: this query asks for data that is out of scope "
+                                                       f"for this use case (need {out_need}). Report the scope restriction "
+                                                       "as a finding and do not rephrase to reach the same records."}
+    hits, withheld = [], 0
     for score, i in _bm25(est, query)[: int(args.get("top_k") or 6)]:
         kind, doc_id, title, text = est["docs"][i]
+        if kind == "entry" and excluded_match(text, ctx.use_case):
+            withheld += 1  # a catalog entry that describes excluded records is not shown
+            continue
         hits.append({"type": "catalog_entry" if kind == "entry" else "wiki_page", "id": doc_id,
                      "source_id": f"internal.{doc_id}" if kind == "entry" else None,
                      "title": title, "score": round(score, 2), "snippet": _snippet(text, query)})
-    return {"query": query, "hits": hits, "note": "No hits means no lexical match, not that no data exists." if not hits else None}
+    out = {"query": query, "hits": hits, "note": "No hits means no lexical match, not that no data exists." if not hits else None}
+    if withheld:
+        out["withheld_out_of_scope"] = withheld
+    return out
 
 
 @tool("get_catalog_entry",
@@ -123,6 +135,10 @@ def get_catalog_entry(ctx: ToolContext, args: dict) -> dict:
     if entry_id not in est["entries"]:
         close = [e for e in est["entries"] if entry_id.split(".")[-1][:4] in e]
         raise ToolError(f"No catalog entry {entry_id!r}. Similar ids: {close[:5]}")
+    out_need = excluded_match(json.dumps(est["entries"][entry_id]), ctx.use_case)
+    if out_need:
+        raise ToolError(f"{entry_id} describes data that is out of scope for this use case (need {out_need}). "
+                        "It is not opened. Report it as a scope and privacy finding.")
     backlinks = [p["page_id"] for p in est["wiki"].values() if entry_id in p["body"]]
     return {"source_id": f"internal.{entry_id}", "entry": est["entries"][entry_id],
             "wiki_backlinks": backlinks, "catalog_exported_at": est["catalog"].get("exported_at")}

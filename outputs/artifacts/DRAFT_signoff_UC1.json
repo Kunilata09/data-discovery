@@ -1,0 +1,53 @@
+{
+  "_status": "NON-SUBMISSION DRAFT, DO NOT SUBMIT. DRAFT prepared by the assistant. NOT a signoff. Copy to outputs/UC1/signoff.json only after the learner has confirmed every field. Replace reviewer, due dates and verdict as needed. Proposed due dates are not commitments.",
+  "reviewer": "[LEARNER NAME: to be filled by the learner]",
+  "verdict": "proceed_with_conditions",
+  "_verdict_note": "Recommended scope: prototype only. The overall agent verdict is not_feasible (production gaps N2 and N3 humidity). Choose 'stop' instead if production use is required.",
+  "conditions": [
+    {
+      "text": "Legal sign-off on the upstream Copernicus C3S licence of the Open-Meteo data, for production derived data (agent condition on internal N3 source).",
+      "owner": "Legal / platform data steward",
+      "due": "2026-12-15"
+    },
+    {
+      "text": "Confirm the UCI research-only note against CC BY 4.0, and whether warning use is permitted, before any prototype output is shared.",
+      "owner": "Legal",
+      "due": "2026-12-15"
+    },
+    {
+      "text": "Treat -200 as null in all numeric UCI columns, including benzene, before any analysis.",
+      "owner": "analytics team",
+      "due": "2026-12-15"
+    },
+    {
+      "text": "Confirm the status of station VR-03 (catalog says active, wiki says switched off on 2024-06-30) before using station readings for production.",
+      "owner": "Environment Monitoring Unit",
+      "due": "2026-12-31"
+    }
+  ],
+  "agreements": [
+    {
+      "source_id": "link.uci_360",
+      "reason": "[PROPOSED, learner to confirm] Only prototype source for hourly NO2 (N1 prototype) and the only prototype source with humidity. Verdict feasible_with_conditions, prototype window only."
+    },
+    {
+      "source_id": "api.open_meteo_archive",
+      "reason": "[PROPOSED, learner to confirm] Temperature is covered in both windows, but no humidity is configured. The N3 humidity gap is recorded and is not closed by any condition."
+    },
+    {
+      "source_id": "link.europa_sdg_11_52_099aa6",
+      "reason": "[PROPOSED, learner to confirm] Accepted for prototype only; not feasible because the licence is unknown and production is not covered (rule 7)."
+    }
+  ],
+  "overrides": [
+    {
+      "source_id": "link.uci_360",
+      "reason": "[PROPOSED, learner decision] Dismiss the FRS-STALE flag under calibration rule 5, because the prototype window is historical. The verdict is unchanged. Not applied by the agent."
+    }
+  ],
+  "traced_conclusion": {
+    "source_id": "internal.airq.station_readings",
+    "record_field": "temporal.start",
+    "could_change_if": "Station readings for the prototype window (before 2023-01-01) are supplied by the Environment Monitoring Unit. That would change the statement that internal data cannot serve N1 prototype."
+  }
+}

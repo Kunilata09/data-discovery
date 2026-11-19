@@ -1,0 +1,127 @@
+{
+  "source_id": "api.open_meteo_archive",
+  "kind": "public_api",
+  "title": "Open-Meteo Historical Weather API (reanalysis), hourly temperature and shortwave radiation",
+  "summary": "Hourly gridded reanalysis weather values served by the Open-Meteo archive API for one point location per query. The register configures two hourly variables, temperature_2m (°C) and shortwave_radiation (W/m²), in UTC. Probes returned data for 2004-03-10 to 2004-03-12 and 2024-01-01 to 2024-01-03 at the register default coordinates (45.4642, 9.19, Milan area), so both UC1 windows are reachable. It contains no relative humidity and no traffic data, so N3 is only partly met.",
+  "schema": {
+    "documented": "structured",
+    "field_count": 3,
+    "fields": [
+      {
+        "name": "time",
+        "description": "Hourly timestamp, ISO 8601, UTC (utc_offset_seconds 0 in probe)",
+        "pii": false,
+        "type": "datetime",
+        "unit": "iso8601"
+      },
+      {
+        "name": "temperature_2m",
+        "description": "Air temperature at 2 m (configured variable)",
+        "pii": false,
+        "type": "number",
+        "unit": "°C"
+      },
+      {
+        "name": "shortwave_radiation",
+        "description": "Shortwave radiation (configured variable)",
+        "pii": false,
+        "type": "number",
+        "unit": "W/m²"
+      }
+    ],
+    "notes": "Relative humidity is not a configured variable in the register and was not added. Field descriptions beyond the probe shape are not stated in the register entry; docs at https://open-meteo.com/en/docs/historical-weather-api were not read."
+  },
+  "temporal": {
+    "start": null,
+    "end": null,
+    "grain": "hourly",
+    "metadata_last_updated": null,
+    "open_ended": null,
+    "refresh_cadence": null
+  },
+  "spatial": {
+    "code_system": "decimal latitude/longitude (point query)",
+    "coverage": [
+      "IT"
+    ],
+    "notes": "Single point per call. Probe returned grid point at 45.448154, 9.169279, elevation 147 m, for query at 45.4642, 9.19. The register default is Milan; no client location has been chosen. Client location is an assumption to be recorded in decisions.md. Coverage beyond the probed point is not established."
+  },
+  "ownership": {
+    "owner": null,
+    "publisher": "Open-Meteo.com (provider of the API; underlying reanalysis from Copernicus Climate Change Service C3S per licence page)",
+    "steward": null
+  },
+  "licence": {
+    "name": "CC BY 4.0",
+    "evidence": "probe_url https://open-meteo.com/en/licence (fetched 2026-10-15): 'API data are offered under Attribution 4.0 International (CC BY 4.0)'. The same page lists 'Weather reanalysis, air quality forecasts and elevation data from Copernicus Climate Change Service C3S ( Licence )' with the licence link not named in the text; the page also states the source code is AGPLv3, which does not apply to the data.",
+    "url": "https://open-meteo.com/en/licence",
+    "agreement_status": "not_required_open_data (register: api.open_meteo_archive)",
+    "attribution_text": "Weather data by Open-Meteo.com (page requires a link next to displayed data)",
+    "commercial_use": "unknown",
+    "mixed_sources": true
+  },
+  "access": {
+    "method": "rest_api",
+    "auth_required": false,
+    "reachable": true,
+    "classification": "open data",
+    "approx_size_bytes": 2327,
+    "request_process": "Direct GET to https://archive-api.open-meteo.com/v1/archive with latitude, longitude, start_date, end_date, timezone; variable list fixed by the register. Probes of 3 days returned HTTP 200 with JSON of about 2.3 kB. Full-window size not measured."
+  },
+  "declared_metadata": {
+    "has_missing_values": null,
+    "contains_pii": null,
+    "register_agreement_status": "not_required_open_data",
+    "register_approved_purposes": [
+      "prototyping",
+      "production"
+    ],
+    "register_terms_url": "https://open-meteo.com/en/licence",
+    "register_docs_url": "https://open-meteo.com/en/docs/historical-weather-api"
+  },
+  "documentation_excerpts": [
+    "API data are offered under Attribution 4.0 International (CC BY 4.0) (open-meteo.com/en/licence)",
+    "Weather reanalysis, air quality forecasts and elevation data from Copernicus Climate Change Service C3S (open-meteo.com/en/licence, licence name not stated in text)",
+    "Probe response: \"utc_offset_seconds\": 0, \"timezone\": \"GMT\" for query timezone=UTC"
+  ],
+  "quality_notes": [
+    "Humidity gap: N3 requires hourly temperature and humidity. The register's hourly variables are temperature_2m and shortwave_radiation only. Relative humidity is not available from this entry and was not added. Need stays partly unmet.",
+    "Traffic gap: this source provides no N2 traffic data; it is only a weather source.",
+    "Modelled, not observed: the data are reanalysis values at a grid point, not station measurements. Accuracy at a specific city street or station location is not established.",
+    "Timezone: probes with timezone=UTC returned utc_offset_seconds 0. Times must be converted to Europe/Rome local time before joining with station, traffic or clinic data.",
+    "Location: the register default coordinates (45.4642, 9.19) are Milan. The use case names the client as Valdena (fictional, northern Italy) with no coordinates, so the query location is an unconfirmed assumption to record in decisions.md. The candidate's note about a Lisbon default is not in the use-case spec or the register and is unverified.",
+    "Licence split: the API page states CC BY 4.0 for API data, but the upstream C3S reanalysis carries its own Copernicus licence, which the page links without naming its terms. Legal sign-off is needed before production use, as the register policy requires for production use of external data.",
+    "Commercial use is not stated. Only the CC BY 4.0 attribution requirement is clear from the page."
+  ],
+  "provenance": [
+    {
+      "claim": "Register entry: agreement_status not_required_open_data, approved purposes prototyping and production, endpoint archive-api.open-meteo.com/v1/archive, hourly variables temperature_2m and shortwave_radiation, timezone UTC",
+      "evidence": "list_external_register (api.open_meteo_archive)"
+    },
+    {
+      "claim": "API responds with HTTP 200 for 2024-01-01 to 2024-01-03 at 45.4642, 9.19 and returns 72 hourly values per variable, with utc_offset_seconds 0",
+      "evidence": "call_public_api api.open_meteo_archive, start_date 2024-01-01 end_date 2024-01-03 timezone UTC"
+    },
+    {
+      "claim": "API responds with HTTP 200 for 2004-03-10 to 2004-03-12 and returns 72 hourly values, so the prototype window start is covered",
+      "evidence": "call_public_api api.open_meteo_archive, start_date 2004-03-10 end_date 2004-03-12 timezone UTC"
+    },
+    {
+      "claim": "API data are offered under CC BY 4.0; underlying C3S reanalysis is listed with its own licence link; code is AGPLv3",
+      "evidence": "probe_url https://open-meteo.com/en/licence, last_modified header Sun, 15 Nov 2026 15:02:17 GMT"
+    },
+    {
+      "claim": "The register's default_query lists only temperature_2m and shortwave_radiation; no humidity variable is configured",
+      "evidence": "list_external_register (api.open_meteo_archive default_query)"
+    }
+  ],
+  "unknowns": [
+    "Full data start and end dates of the archive. The two probes confirm only 2004-03-10 to 2004-03-12 and 2024-01-01 to 2024-01-03.",
+    "Whether relative humidity is available from the API at all. The register does not configure it and the docs were not read.",
+    "Client location for the query (Valdena has no coordinates in the brief). Milan default is a register value, not a decision.",
+    "Exact licence of the upstream C3S reanalysis data and whether it permits production use of the derived dataset. The licence page names no licence text.",
+    "Commercial-use terms of CC BY 4.0 as applied by the provider, and whether Legal has signed off production use.",
+    "Refresh cadence and update lag of the archive. Not stated in the register or the probes.",
+    "Accuracy of the reanalysis at the client's monitoring stations (no validation was done)."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "_status": "NON-SUBMISSION DRAFT, DO NOT SUBMIT. DRAFT prepared by the assistant. NOT a signoff. Copy to outputs/UC2/signoff.json only after the learner has confirmed every field. Replace reviewer and verdict as needed.",
+  "reviewer": "[LEARNER NAME: to be filled by the learner]",
+  "verdict": "stop",
+  "_verdict_note": "Recommended: stop as scoped, because the must need N2 (product code mapping) has no source. Choose 'proceed_with_conditions' instead if the learner expects Retail Operations to supply the mapping; then conditions with owners and due dates are required.",
+  "conditions": [],
+  "agreements": [
+    {
+      "source_id": "internal.sales.products",
+      "reason": "[PROPOSED, learner to confirm] The table has current codes only, no validity dates and ambiguous names, so it cannot close N2 on its own (temporal.end is null in its record)."
+    },
+    {
+      "source_id": "api.nager_public_holidays",
+      "reason": "[PROPOSED, learner to confirm] Context source with an unknown licence blocker. Not feasible under calibration rule 7. It does not change the overall verdict because N4 is a should need."
+    }
+  ],
+  "overrides": [],
+  "traced_conclusion": {
+    "source_id": "internal.sales.products",
+    "record_field": "quality_notes",
+    "could_change_if": "Retail Operations supplies an authoritative old-to-new product code mapping with validity dates. That would let N2 history be met, and the verdict would move to feasible with conditions, as the memo states."
+  }
+}

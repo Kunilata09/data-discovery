@@ -1,0 +1,150 @@
+{
+  "source_id": "link.europa_sdg_11_52_099aa6",
+  "kind": "dataset_link",
+  "title": "Eurostat SDG 11.52: Premature deaths due to exposure to PM2.5, Italy (annual, JSON-stat API)",
+  "summary": "National annual series for Italy only: premature deaths attributed to exposure to fine particulate matter (PM2.5), published by Eurostat under SDG indicator 11.52. The series is returned by the Eurostat dissemination JSON-stat API, with dimensions freq, airpol, effect, unit (number and rate), geo and time. The API response covers 18 annual time points from 2005 to 2023 with 36 cells, and 2006 is absent from the time dimension. It is national context only, with no district, station or hourly grain.",
+  "schema": {
+    "documented": "structured",
+    "field_count": 7,
+    "fields": [
+      {
+        "name": "freq",
+        "type": "dimension",
+        "description": "Frequency; single value A: Annual",
+        "unit": null,
+        "pii": false
+      },
+      {
+        "name": "airpol",
+        "type": "dimension",
+        "description": "Air pollutant; single value PM2_5: Particulates < 2.5µm",
+        "unit": null,
+        "pii": false
+      },
+      {
+        "name": "effect",
+        "type": "dimension",
+        "description": "Effect; single value PMD: Premature death",
+        "unit": null,
+        "pii": false
+      },
+      {
+        "name": "unit",
+        "type": "dimension",
+        "description": "Unit; NR: Number, RT: Rate",
+        "unit": null,
+        "pii": false
+      },
+      {
+        "name": "geo",
+        "type": "dimension",
+        "description": "Geography; single value IT: Italy",
+        "unit": null,
+        "pii": false
+      },
+      {
+        "name": "time",
+        "type": "dimension",
+        "description": "Calendar year, 2005 to 2023 with 2006 absent from the returned time dimension",
+        "unit": "year",
+        "pii": false
+      },
+      {
+        "name": "value",
+        "type": "measure",
+        "description": "Premature deaths (number) or rate per the unit dimension; the rate unit is not stated in the API summary",
+        "unit": null,
+        "pii": false
+      }
+    ],
+    "notes": "Structure read from JSON-stat summary (summarize_jsonstat). Value measure unit for RT is not stated in the fetched summary."
+  },
+  "temporal": {
+    "start": "2005-01-01",
+    "end": "2023-12-31",
+    "grain": "annual",
+    "metadata_last_updated": "2025-12-09",
+    "open_ended": null,
+    "refresh_cadence": null
+  },
+  "spatial": {
+    "code_system": "ISO2",
+    "coverage": [
+      "IT"
+    ],
+    "notes": "Single geo value IT (Italy). No sub-national breakdown in the returned series."
+  },
+  "ownership": {
+    "owner": null,
+    "publisher": "Eurostat (ESTAT), per the JSON-stat response source field",
+    "steward": null
+  },
+  "licence": {
+    "name": null,
+    "agreement_status": null,
+    "attribution_text": null,
+    "commercial_use": "unknown",
+    "evidence": "No licence statement found. probe_url on https://ec.europa.eu/eurostat/about/policies/copyright redirected to an EU Login page with no licence text (licence_snippets empty). The API response carries no licence field. Licence is unknown and must be read at source before use.",
+    "mixed_sources": null,
+    "url": null
+  },
+  "access": {
+    "method": "rest_api",
+    "auth_required": false,
+    "reachable": true,
+    "classification": null,
+    "request_process": null,
+    "approx_size_bytes": 5827
+  },
+  "canonical_ref": "ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sdg_11_52?format=JSON&geo=IT&lang=EN",
+  "declared_metadata": {},
+  "documentation_excerpts": [
+    "Premature deaths due to exposure to fine particulate matter (PM2.5) (JSON-stat label, inspect_dataset_link)",
+    "updated: 2025-12-09T11:00:00+0100 (JSON-stat response, inspect_dataset_link)"
+  ],
+  "sample_findings": [
+    "Full JSON-stat response (5,827 bytes) was read via summarize_jsonstat, not a row sample. Time dimension: 18 values, 2005 and 2007 to 2023; 2006 is not present. expected_cells 36, value_count 36, missing_cells 0 (tool-computed, not a source flag).",
+    "Unit dimension has two values: NR (Number) and RT (Rate). Rate unit is not stated.",
+    "Single values for freq (A), airpol (PM2_5), effect (PMD), geo (IT). No negative or sentinel values were inspected because the values were not profiled row by row."
+  ],
+  "quality_notes": [
+    "Time gap: the year 2006 is missing from the returned time dimension (summarize_jsonstat and inspect_dataset_link both list 2005, 2007 to 2023). Annual coverage is not continuous.",
+    "Data ends in 2023 (time.last = 2023). It does not cover the production window 2024-01-01 to 2025-12-31 and cannot support the live model in that window.",
+    "Only Italy (geo = IT) and only annual; no hourly, daily or district grain, so it fits N6 only (national annual context).",
+    "The rate unit (RT) is not defined in the API summary; numbers and rates must not be mixed without checking the source metadata.",
+    "Eurostat label 'updated' is 2025-12-09, but the refresh cadence is not stated in any fetched source.",
+    "Catalog candidate states it targets the prototype window only; the series' 2005 start falls inside the prototype window (2004-03-10 to 2005-04-04) only for the single year 2005."
+  ],
+  "provenance": [
+    {
+      "claim": "The link resolves (HTTP 200, application/json, content-length 5827) and is a Eurostat JSON-stat dataset for SDG 11.52 PM2.5 premature deaths, geo IT.",
+      "evidence": "inspect_dataset_link on https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sdg_11_52?format=JSON&lang=EN&geo=IT"
+    },
+    {
+      "claim": "Dimensions are freq (A), airpol (PM2_5), effect (PMD), unit (NR, RT), geo (IT), time (18 values, 2005 and 2007 to 2023); expected 36 cells, all present.",
+      "evidence": "summarize_jsonstat on the same URL"
+    },
+    {
+      "claim": "Time coverage is 2005 to 2023 and metadata updated 2025-12-09.",
+      "evidence": "inspect_dataset_link summary.time and summary.updated"
+    },
+    {
+      "claim": "No licence could be established from the Eurostat copyright page; it redirects to an EU Login page.",
+      "evidence": "probe_url https://ec.europa.eu/eurostat/about/policies/copyright (final_url EU Login, licence_snippets empty)"
+    },
+    {
+      "claim": "The register has no entry for this Eurostat series; the open-data policy allows statistics-office datasets for prototyping, benchmarking and context, but production use needs Legal sign-off.",
+      "evidence": "list_external_register, policy.open_data_links notes"
+    }
+  ],
+  "unknowns": [
+    "Licence and reuse terms for Eurostat data (no licence statement reachable; the copyright page required EU Login).",
+    "Unit of the RT (rate) measure: per 100,000 or other basis is not stated in the fetched response.",
+    "Cause of the 2006 gap in the time dimension.",
+    "Refresh cadence and next release date.",
+    "Whether 2024 and 2025 values will be published (not stated).",
+    "Owner or steward beyond the ESTAT source label.",
+    "Methodology of the PM2.5 premature-death estimate (model, input data) is not in the fetched documentation."
+  ],
+  "status": "active"
+}
